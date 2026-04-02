@@ -2,7 +2,7 @@
   "expo": {
     "name": "VERII WMS Mobile",
     "slug": "verii-wms-mobile",
-    "version": "1.0.1",
+    "version": "1.0.0",
     "runtimeVersion": {
       "policy": "appVersion"
     },
@@ -18,10 +18,13 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.v3rii.veriiwmsmobile",
-      "buildNumber": "2"
+      "buildNumber": "1"
     },
     "android": {
-      "versionCode": 2,
+      "versionCode": 1,
+      "permissions": [
+        "REQUEST_INSTALL_PACKAGES"
+      ],
       "package": "com.v3rii.veriiwmsmobile",
       "adaptiveIcon": {
         "foregroundImage": "./assets/v3logo.png",

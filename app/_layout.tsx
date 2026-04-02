@@ -1,7 +1,7 @@
 import '@/lib/suppressConsoleErrors';
 import 'react-native-gesture-handler';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, LogBox, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, AppState, LogBox, View } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
@@ -11,7 +11,12 @@ import { AppErrorBoundary } from '@/components/system/AppErrorBoundary';
 import { initializeApiBaseUrl } from '@/constants/config';
 import { showError } from '@/lib/feedback';
 import i18n from '@/locales';
-import { fetchVersionCheck, openAndroidApkUrl, type VersionCheckResult } from '@/lib/versionCheck';
+import {
+  cleanupCachedApkUpdates,
+  downloadAndInstallAndroidApk,
+  fetchVersionCheck,
+  type VersionCheckResult,
+} from '@/lib/versionCheck';
 import { ThemeProvider, useTheme } from '@/providers/ThemeProvider';
 import { useAuthStore } from '@/store/auth';
 import { queryClient } from '@/lib/queryClient';
@@ -21,6 +26,8 @@ LogBox.ignoreLogs([
   /React keys must be passed directly/i,
   /Path|Circle/i,
 ]);
+
+const VERSION_CHECK_INTERVAL_MS = 1000 * 60 * 30;
 
 export default function RootLayout(): React.ReactElement {
   return (
@@ -35,34 +42,96 @@ function RootLayoutContent(): React.ReactElement {
   const isHydrated = useAuthStore((state) => state.isHydrated);
   const { theme } = useTheme();
   const [versionState, setVersionState] = useState<VersionCheckResult | null>(null);
+  const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<number>(0);
+  const lastVersionCheckAtRef = useRef<number>(0);
 
   useEffect(() => {
     void hydrate();
     void initializeApiBaseUrl().catch(() => undefined);
+    void cleanupCachedApkUpdates().catch(() => undefined);
   }, [hydrate]);
+
+  const runVersionCheck = useCallback(
+    async (force = false) => {
+      if (!isHydrated || isInstallingUpdate) {
+        return;
+      }
+
+      const now = Date.now();
+      if (!force && now - lastVersionCheckAtRef.current < VERSION_CHECK_INTERVAL_MS) {
+        return;
+      }
+
+      lastVersionCheckAtRef.current = now;
+
+      try {
+        const result = await fetchVersionCheck();
+        if (result?.updateAvailable) {
+          setVersionState(result);
+        } else if (force) {
+          setVersionState(null);
+        }
+      } catch {
+        // Version check should not block app startup.
+      }
+    },
+    [isHydrated, isInstallingUpdate],
+  );
 
   useEffect(() => {
     if (!isHydrated) {
       return;
     }
 
-    let cancelled = false;
+    void runVersionCheck(true);
+  }, [isHydrated, runVersionCheck]);
 
-    void (async () => {
-      try {
-        const result = await fetchVersionCheck();
-        if (!cancelled && result?.updateAvailable) {
-          setVersionState(result);
-        }
-      } catch {
-        // Version check should not block app startup.
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        void runVersionCheck();
       }
-    })();
+    });
+
+    const interval = setInterval(() => {
+      void runVersionCheck();
+    }, VERSION_CHECK_INTERVAL_MS);
 
     return () => {
-      cancelled = true;
+      subscription.remove();
+      clearInterval(interval);
     };
-  }, [isHydrated]);
+  }, [isHydrated, runVersionCheck]);
+
+  const handleOpenDetails = useCallback(() => {
+    setVersionState(null);
+    router.push('/release-notes');
+  }, []);
+
+  const handleInstallUpdate = useCallback(async () => {
+    if (!versionState?.apkUrl) {
+      return;
+    }
+
+    setIsInstallingUpdate(true);
+    setDownloadProgress(0);
+
+    try {
+      await downloadAndInstallAndroidApk(versionState.apkUrl, (progress) => {
+        setDownloadProgress(progress.progress);
+      });
+      setVersionState(null);
+    } catch (error) {
+      showError(error, i18n.t('updates.openFailed'));
+    } finally {
+      setIsInstallingUpdate(false);
+    }
+  }, [versionState]);
 
   if (!isHydrated) {
     return (
@@ -81,9 +150,19 @@ function RootLayoutContent(): React.ReactElement {
               <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.background } }} />
               <AppDialog
                 visible={Boolean(versionState)}
-                title={versionState?.forceUpdate ? i18n.t('updates.forceTitle') : i18n.t('updates.availableTitle')}
+                title={
+                  isInstallingUpdate
+                    ? i18n.t('updates.downloadingTitle')
+                    : versionState?.forceUpdate
+                      ? i18n.t('updates.forceTitle')
+                      : i18n.t('updates.availableTitle')
+                }
                 description={
-                  versionState
+                  isInstallingUpdate
+                    ? i18n.t('updates.downloadingDescription', {
+                        percent: Math.round(downloadProgress * 100),
+                      })
+                    : versionState
                     ? i18n.t('updates.description', {
                         version: versionState.latestVersion,
                         notes: versionState.releaseNotes || i18n.t('updates.noNotes'),
@@ -91,7 +170,7 @@ function RootLayoutContent(): React.ReactElement {
                     : undefined
                 }
                 onClose={() => {
-                  if (!versionState?.forceUpdate) {
+                  if (!versionState?.forceUpdate && !isInstallingUpdate) {
                     setVersionState(null);
                   }
                 }}
@@ -101,29 +180,35 @@ function RootLayoutContent(): React.ReactElement {
                         {
                           label: i18n.t('updates.details'),
                           tone: 'secondary',
-                          onPress: () => router.push('/release-notes'),
+                          disabled: isInstallingUpdate,
+                          onPress: handleOpenDetails,
                         },
                         {
-                          label: i18n.t('updates.installNow'),
+                          label: isInstallingUpdate ? i18n.t('updates.installingNow') : i18n.t('updates.installNow'),
+                          disabled: isInstallingUpdate,
                           onPress: () => {
-                            void openAndroidApkUrl(versionState.apkUrl).catch((error) => {
-                              showError(error, i18n.t('updates.openFailed'));
-                            });
+                            void handleInstallUpdate();
                           },
                         },
                       ]
                     : [
                         {
-                          label: i18n.t('updates.details'),
+                          label: i18n.t('updates.later'),
                           tone: 'secondary',
-                          onPress: () => router.push('/release-notes'),
+                          disabled: isInstallingUpdate,
+                          onPress: () => setVersionState(null),
                         },
                         {
-                          label: i18n.t('updates.installNow'),
+                          label: i18n.t('updates.details'),
+                          tone: 'secondary',
+                          disabled: isInstallingUpdate,
+                          onPress: handleOpenDetails,
+                        },
+                        {
+                          label: isInstallingUpdate ? i18n.t('updates.installingNow') : i18n.t('updates.installNow'),
+                          disabled: isInstallingUpdate,
                           onPress: () => {
-                            void openAndroidApkUrl(versionState?.apkUrl ?? '').catch((error) => {
-                              showError(error, i18n.t('updates.openFailed'));
-                            });
+                            void handleInstallUpdate();
                           },
                         },
                       ]

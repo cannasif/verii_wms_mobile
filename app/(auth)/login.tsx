@@ -16,11 +16,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { LoginForm } from '@/features/auth/components/LoginForm';
 import { Text } from '@/components/ui/Text';
 import { COLORS, GRADIENTS } from '@/constants/theme';
+import { getAppInfo } from '@/lib/appInfo';
 import { cycleLanguage, getCurrentLanguageLabel } from '@/locales';
 
 export default function LoginScreen(): React.ReactElement {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const appInfo = getAppInfo();
 
   return (
     <View style={styles.root}>
@@ -77,6 +79,12 @@ export default function LoginScreen(): React.ReactElement {
                     <Text style={styles.footerText}>{t('auth.sessionPolicyDescription')}</Text>
                   </View>
                 </View>
+              </View>
+
+              <View style={styles.versionRow}>
+                <Text style={styles.versionText}>
+                  {t('auth.versionLabel', { version: appInfo.version })}
+                </Text>
               </View>
             </ScrollView>
           </KeyboardAvoidingView>
@@ -156,4 +164,6 @@ const styles = StyleSheet.create({
   footerCopy: { flex: 1, gap: 4 },
   footerTitle: { fontSize: 14, fontWeight: '800' },
   footerText: { fontSize: 13, lineHeight: 18, color: COLORS.textSecondary },
+  versionRow: { marginTop: 18, alignItems: 'center' },
+  versionText: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '700' },
 });

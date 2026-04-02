@@ -8,6 +8,7 @@ interface DialogAction {
   label: string;
   onPress: () => void;
   tone?: 'primary' | 'secondary';
+  disabled?: boolean;
 }
 
 interface AppDialogProps {
@@ -38,11 +39,13 @@ export function AppDialog({
               <Pressable
                 key={action.label}
                 onPress={action.onPress}
+                disabled={action.disabled}
                 style={[
                   styles.action,
                   action.tone === 'secondary'
                     ? [styles.secondaryAction, { backgroundColor: theme.colors.surfaceStrong, borderColor: theme.colors.border }]
                     : [styles.primaryAction, { backgroundColor: theme.colors.primary }],
+                  action.disabled ? styles.disabledAction : null,
                 ]}
               >
                 <Text
@@ -99,6 +102,9 @@ const styles = StyleSheet.create({
   primaryAction: {},
   secondaryAction: {
     borderWidth: 1,
+  },
+  disabledAction: {
+    opacity: 0.55,
   },
   actionText: {
     fontWeight: '900',
