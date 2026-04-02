@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "VERII WMS Mobile",
+    "slug": "verii-wms-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/v3logo.png",
+    "scheme": "verii-wms-mobile",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/v3riiwms.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#071224"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.v3rii.veriiwmsmobile"
+    },
+    "android": {
+      "package": "com.v3rii.veriiwmsmobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/v3logo.png",
+        "backgroundColor": "#071224"
+      },
+      "edgeToEdgeEnabled": true,
+      "usesCleartextTraffic": true
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "VERII WMS barkod okutmak için kameraya erişmek istiyor."
+        }
+      ]
+    ]
+  }
+}
