@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { PageShell } from '@/components/layout/PageShell';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
@@ -21,6 +22,12 @@ export default function ReleaseNotesScreen(): React.ReactElement {
     queryKey: ['mobile-release-notes'],
     queryFn: fetchLatestReleaseInfo,
   });
+
+  useEffect(() => {
+    if (releaseQuery.data?.forceUpdate) {
+      router.setParams({ forceUpdate: 'true' });
+    }
+  }, [releaseQuery.data?.forceUpdate]);
 
   const handleInstall = async (): Promise<void> => {
     const apkUrl = releaseQuery.data?.apkUrl;
@@ -74,12 +81,14 @@ export default function ReleaseNotesScreen(): React.ReactElement {
           }
         >
           <Text>{releaseQuery.data?.releaseNotes || t('updates.noNotes')}</Text>
-          <Button
-            title={t('updates.checkNow')}
-            tone="secondary"
-            onPress={() => void releaseQuery.refetch()}
-            style={{ marginTop: 12 }}
-          />
+          {!releaseQuery.data?.forceUpdate ? (
+            <Button
+              title={t('updates.checkNow')}
+              tone="secondary"
+              onPress={() => void releaseQuery.refetch()}
+              style={{ marginTop: 12 }}
+            />
+          ) : null}
           {releaseQuery.data?.updateAvailable ? (
             <Button
               title={
@@ -96,6 +105,11 @@ export default function ReleaseNotesScreen(): React.ReactElement {
           ) : (
             <Text style={{ marginTop: 12 }}>{t('updates.upToDate')}</Text>
           )}
+          {releaseQuery.data?.forceUpdate ? (
+            <Text style={{ marginTop: 12 }}>
+              {t('updates.forceDescription')}
+            </Text>
+          ) : null}
         </SectionCard>
       )}
     </PageShell>

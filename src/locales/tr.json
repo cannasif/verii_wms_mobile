@@ -261,9 +261,10 @@
     "cancel": "İptal"
   },
   "updates": {
-    "availableTitle": "Yeni surum hazir",
-    "forceTitle": "Guncelleme gerekli",
-    "description": "Yeni surum: {{version}}\n\nNotlar: {{notes}}",
+  "availableTitle": "Yeni surum hazir",
+  "forceTitle": "Guncelleme gerekli",
+  "forceDescription": "Bu surumu kullanmaya devam etmek icin uygulamayi guncellemeniz gerekiyor.",
+  "description": "Yeni surum: {{version}}\n\nNotlar: {{notes}}",
     "downloadingTitle": "Guncelleme indiriliyor",
     "downloadingDescription": "Yeni APK uygulama icinde indiriliyor. Tamamlanma: %{{percent}}",
     "noNotes": "Surum notu bulunmuyor.",

@@ -261,9 +261,10 @@
     "cancel": "Cancel"
   },
   "updates": {
-    "availableTitle": "Update available",
-    "forceTitle": "Update required",
-    "description": "New version: {{version}}\n\nNotes: {{notes}}",
+  "availableTitle": "Update available",
+  "forceTitle": "Update required",
+  "forceDescription": "You need to update the app to keep using this version.",
+  "description": "New version: {{version}}\n\nNotes: {{notes}}",
     "downloadingTitle": "Downloading update",
     "downloadingDescription": "The new APK is being downloaded inside the app. Completion: %{{percent}}",
     "noNotes": "No release notes provided.",
