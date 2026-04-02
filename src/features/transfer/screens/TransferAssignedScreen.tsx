@@ -7,7 +7,6 @@ import { PagedFilterModal } from '@/components/paged/PagedFilterModal';
 import { PagedFlatList } from '@/components/paged/PagedFlatList';
 import { PagedListToolbar } from '@/components/paged/PagedListToolbar';
 import { Text } from '@/components/ui/Text';
-import { COLORS } from '@/constants/theme';
 import { formatLocalizedDate } from '@/lib/formatters';
 import { useTheme } from '@/providers/ThemeProvider';
 import { useAssignedTransferHeaders } from '../hooks/useAssignedTransferHeaders';
@@ -54,7 +53,7 @@ export function TransferAssignedScreen(): React.ReactElement {
         <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{t('screens.transfer.subtitle')}</Text>
 
         <View style={[styles.heroCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-          <View style={styles.heroBadge}>
+          <View style={[styles.heroBadge, { backgroundColor: theme.mode === 'light' ? 'rgba(2,132,199,0.10)' : 'rgba(56,189,248,0.12)' }]}>
             <ShipmentTrackingIcon size={20} color={theme.colors.primary} />
           </View>
           <View style={styles.heroCopy}>
@@ -84,7 +83,7 @@ export function TransferAssignedScreen(): React.ReactElement {
       <View style={styles.rowCopy}>
         <View style={styles.rowHeader}>
           <Text style={styles.rowTitle}>{item.documentNo || '-'}</Text>
-          <View style={styles.pendingPill}>
+          <View style={[styles.pendingPill, { backgroundColor: theme.mode === 'light' ? 'rgba(2,132,199,0.12)' : 'rgba(56,189,248,0.16)' }]}>
             <Text style={[styles.pendingText, { color: theme.colors.primary }]}>{t('screens.transfer.pendingBadge')}</Text>
           </View>
         </View>
@@ -145,18 +144,16 @@ export function TransferAssignedScreen(): React.ReactElement {
 const styles = StyleSheet.create({
   headerContent: { gap: 16, marginBottom: 8 },
   backButton: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' },
-  backText: { color: COLORS.textSecondary, fontWeight: '700' },
+  backText: { fontWeight: '700' },
   title: { fontSize: 28, fontWeight: '900' },
-  subtitle: { color: COLORS.textSecondary, lineHeight: 22 },
+  subtitle: { lineHeight: 22 },
   heroCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
     borderRadius: 24,
     padding: 18,
-    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   heroBadge: {
     width: 48,
@@ -164,20 +161,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(56,189,248,0.12)',
   },
   heroCopy: { flex: 1, gap: 4 },
   heroTitle: { fontSize: 17, fontWeight: '800' },
-  heroText: { color: COLORS.textSecondary, lineHeight: 20 },
+  heroText: { lineHeight: 20 },
   rowCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     borderRadius: 22,
     padding: 16,
-    backgroundColor: 'rgba(255,255,255,0.03)',
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   rowPressed: { opacity: 0.9 },
   rowCopy: { flex: 1, gap: 5 },
@@ -187,9 +181,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    backgroundColor: 'rgba(56,189,248,0.16)',
   },
-  pendingText: { color: COLORS.primary, fontSize: 11, fontWeight: '900' },
-  rowCustomer: { color: COLORS.text, fontWeight: '700' },
-  rowMeta: { color: COLORS.textSecondary, fontSize: 12, lineHeight: 18 },
+  pendingText: { fontSize: 11, fontWeight: '900' },
+  rowCustomer: { fontWeight: '700' },
+  rowMeta: { fontSize: 12, lineHeight: 18 },
 });

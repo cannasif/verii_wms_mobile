@@ -2,9 +2,10 @@ import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Add01Icon, Cancel01Icon, Delete02Icon } from 'hugeicons-react-native';
 import { useTranslation } from 'react-i18next';
-import { COLORS, LAYOUT, RADII, SPACING } from '@/constants/theme';
+import { LAYOUT, RADII, SPACING } from '@/constants/theme';
 import { Text } from '@/components/ui/Text';
 import { getOperatorsForColumn } from '@/lib/paged';
+import { useTheme } from '@/providers/ThemeProvider';
 import type { DraftFilterRow, FilterColumnConfig, FilterLogic } from '@/types/paged';
 
 interface PagedFilterModalProps {
@@ -35,19 +36,20 @@ export function PagedFilterModal({
   onClear,
 }: PagedFilterModalProps): React.ReactElement {
   const { t } = useTranslation();
+  const { theme } = useTheme();
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, { backgroundColor: theme.mode === 'light' ? 'rgba(148,163,184,0.32)' : 'rgba(2, 8, 23, 0.6)' }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { backgroundColor: theme.colors.backgroundSecondary, borderColor: theme.colors.border }]}>
           <View style={styles.header}>
             <View>
               <Text style={styles.title}>{t('paged.advancedTitle')}</Text>
-              <Text style={styles.subtitle}>{t('paged.advancedDescription')}</Text>
+              <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{t('paged.advancedDescription')}</Text>
             </View>
-            <Pressable onPress={onClose} style={styles.closeButton}>
-              <Cancel01Icon size={20} color={COLORS.textSecondary} />
+            <Pressable onPress={onClose} style={[styles.closeButton, { backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.04)' : 'rgba(255,255,255,0.04)' }]}>
+              <Cancel01Icon size={20} color={theme.colors.textSecondary} />
             </Pressable>
           </View>
 
@@ -56,9 +58,13 @@ export function PagedFilterModal({
               <Pressable
                 key={value}
                 onPress={() => onFilterLogicChange(value)}
-                style={[styles.logicChip, filterLogic === value && styles.logicChipActive]}
+                style={[
+                  styles.logicChip,
+                  { borderColor: theme.colors.border, backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.03)' : 'rgba(255,255,255,0.03)' },
+                  filterLogic === value && { backgroundColor: theme.mode === 'light' ? 'rgba(2,132,199,0.12)' : 'rgba(56,189,248,0.18)', borderColor: theme.mode === 'light' ? 'rgba(2,132,199,0.3)' : 'rgba(56,189,248,0.35)' },
+                ]}
               >
-                <Text style={[styles.logicText, filterLogic === value && styles.logicTextActive]}>{t(`paged.logic.${value}`)}</Text>
+                <Text style={[styles.logicText, { color: theme.colors.textSecondary }, filterLogic === value && { color: theme.colors.primary }]}>{t(`paged.logic.${value}`)}</Text>
               </Pressable>
             ))}
           </View>
@@ -74,23 +80,23 @@ export function PagedFilterModal({
                   <View style={styles.filterHeader}>
                     <Text style={styles.filterTitle}>{t('paged.filterRule')}</Text>
                     <Pressable onPress={() => onRemove(row.id)} style={styles.iconButton}>
-                      <Delete02Icon size={18} color={COLORS.danger} />
+                      <Delete02Icon size={18} color={theme.colors.danger} />
                     </Pressable>
                   </View>
 
                   <View style={styles.choiceRow}>
                     <Pressable
                       onPress={() => onUpdate(row.id, { column: columns[(columnIndex + 1) % columns.length]?.value ?? row.column })}
-                      style={styles.choiceButton}
+                      style={[styles.choiceButton, { borderColor: theme.colors.border, backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.03)' : 'rgba(7,18,36,0.7)' }]}
                     >
-                      <Text style={styles.choiceLabel}>{t('paged.column')}</Text>
+                      <Text style={[styles.choiceLabel, { color: theme.colors.textMuted }]}>{t('paged.column')}</Text>
                       <Text style={styles.choiceValue}>{t(columns[columnIndex]?.labelKey ?? 'paged.column')}</Text>
                     </Pressable>
                     <Pressable
                       onPress={() => onUpdate(row.id, { operator: operators[(operatorIndex + 1) % operators.length] ?? row.operator })}
-                      style={styles.choiceButton}
+                      style={[styles.choiceButton, { borderColor: theme.colors.border, backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.03)' : 'rgba(7,18,36,0.7)' }]}
                     >
-                      <Text style={styles.choiceLabel}>{t('paged.operator')}</Text>
+                      <Text style={[styles.choiceLabel, { color: theme.colors.textMuted }]}>{t('paged.operator')}</Text>
                       <Text style={styles.choiceValue}>{t(`paged.operators.${operators[operatorIndex] ?? row.operator}`)}</Text>
                     </Pressable>
                   </View>
@@ -99,25 +105,25 @@ export function PagedFilterModal({
                     value={row.value}
                     onChangeText={(value) => onUpdate(row.id, { value })}
                     placeholder={t('paged.valuePlaceholder')}
-                    placeholderTextColor={COLORS.textMuted}
-                    style={styles.input}
+                    placeholderTextColor={theme.colors.textMuted}
+                    style={[styles.input, { borderColor: theme.colors.border, backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.03)' : 'rgba(7,18,36,0.7)', color: theme.colors.text }]}
                   />
                 </View>
               );
             })}
 
-            <Pressable onPress={onAdd} style={styles.addButton}>
-              <Add01Icon size={18} color={COLORS.primary} />
-              <Text style={styles.addButtonText}>{t('paged.addFilter')}</Text>
+            <Pressable onPress={onAdd} style={[styles.addButton, { borderColor: theme.mode === 'light' ? 'rgba(2,132,199,0.35)' : 'rgba(56,189,248,0.4)', backgroundColor: theme.mode === 'light' ? 'rgba(2,132,199,0.05)' : 'rgba(56,189,248,0.06)' }]}>
+              <Add01Icon size={18} color={theme.colors.primary} />
+              <Text style={[styles.addButtonText, { color: theme.colors.primary }]}>{t('paged.addFilter')}</Text>
             </Pressable>
           </ScrollView>
 
           <View style={styles.footer}>
-            <Pressable onPress={onClear} style={styles.footerSecondary}>
-              <Text style={styles.footerSecondaryText}>{t('paged.clearFilters')}</Text>
+            <Pressable onPress={onClear} style={[styles.footerSecondary, { borderColor: theme.colors.border }]}>
+              <Text style={[styles.footerSecondaryText, { color: theme.colors.textSecondary }]}>{t('paged.clearFilters')}</Text>
             </Pressable>
-            <Pressable onPress={onApply} style={styles.footerPrimary}>
-              <Text style={styles.footerPrimaryText}>{t('paged.applyFilters')}</Text>
+            <Pressable onPress={onApply} style={[styles.footerPrimary, { backgroundColor: theme.colors.primary }]}>
+              <Text style={[styles.footerPrimaryText, { color: theme.colors.background }]}>{t('paged.applyFilters')}</Text>
             </Pressable>
           </View>
         </View>
@@ -127,20 +133,14 @@ export function PagedFilterModal({
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(2, 8, 23, 0.6)',
-  },
+  overlay: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     maxHeight: '84%',
     borderTopLeftRadius: RADII.xxl,
     borderTopRightRadius: RADII.xxl,
-    backgroundColor: COLORS.backgroundSecondary,
     borderTopWidth: 1,
     borderLeftWidth: 1,
     borderRightWidth: 1,
-    borderColor: COLORS.border,
     padding: SPACING.lg,
     gap: SPACING.md,
   },
@@ -150,14 +150,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   title: { fontSize: 20, fontWeight: '900' },
-  subtitle: { marginTop: 4, color: COLORS.textSecondary, lineHeight: 20 },
+  subtitle: { marginTop: 4, lineHeight: 20 },
   closeButton: {
     width: 40,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: RADII.pill,
-    backgroundColor: 'rgba(255,255,255,0.04)',
   },
   logicRow: { flexDirection: 'row', gap: SPACING.xs },
   logicChip: {
@@ -167,20 +166,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: 'rgba(255,255,255,0.03)',
   },
-  logicChipActive: { backgroundColor: 'rgba(56,189,248,0.18)', borderColor: 'rgba(56,189,248,0.35)' },
-  logicText: { color: COLORS.textSecondary, fontWeight: '700' },
-  logicTextActive: { color: COLORS.primary },
+  logicText: { fontWeight: '700' },
   body: { maxHeight: 420 },
   bodyContent: { gap: SPACING.sm, paddingBottom: SPACING.xs },
   filterCard: {
     borderRadius: RADII.lg,
     padding: SPACING.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: 'rgba(255,255,255,0.03)',
     gap: SPACING.sm,
   },
   filterHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -192,20 +185,15 @@ const styles = StyleSheet.create({
     borderRadius: RADII.md,
     padding: SPACING.sm,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: 'rgba(7,18,36,0.7)',
     gap: 4,
   },
-  choiceLabel: { color: COLORS.textMuted, fontSize: 12, fontWeight: '700' },
+  choiceLabel: { fontSize: 12, fontWeight: '700' },
   choiceValue: { fontWeight: '800', fontSize: 14 },
   input: {
     minHeight: LAYOUT.inputHeight,
     borderRadius: RADII.sm,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: 'rgba(7,18,36,0.7)',
     paddingHorizontal: SPACING.sm,
-    color: COLORS.text,
   },
   addButton: {
     minHeight: 50,
@@ -216,10 +204,8 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: 'rgba(56,189,248,0.4)',
-    backgroundColor: 'rgba(56,189,248,0.06)',
   },
-  addButtonText: { color: COLORS.primary, fontWeight: '800' },
+  addButtonText: { fontWeight: '800' },
   footer: { flexDirection: 'row', gap: SPACING.xs },
   footerSecondary: {
     flex: 1,
@@ -228,16 +214,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
-  footerSecondaryText: { color: COLORS.textSecondary, fontWeight: '800' },
+  footerSecondaryText: { fontWeight: '800' },
   footerPrimary: {
     flex: 1,
     minHeight: 52,
     borderRadius: RADII.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.primary,
   },
-  footerPrimaryText: { color: COLORS.background, fontWeight: '900' },
+  footerPrimaryText: { fontWeight: '900' },
 });

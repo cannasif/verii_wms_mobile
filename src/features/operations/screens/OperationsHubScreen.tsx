@@ -4,7 +4,6 @@ import { router } from 'expo-router';
 import { ArrowRight01Icon } from 'hugeicons-react-native';
 import { useTranslation } from 'react-i18next';
 import { Text } from '@/components/ui/Text';
-import { COLORS } from '@/constants/theme';
 import { useTheme } from '@/providers/ThemeProvider';
 import { WORKFLOW_MODULES } from '../config/workflow-modules';
 import { WorkflowIcon } from './WorkflowIcon';
@@ -83,27 +82,23 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 20,
     borderRadius: 28,
-    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
-  eyebrow: { color: COLORS.primary, fontSize: 12, fontWeight: '900', letterSpacing: 1.4 },
+  eyebrow: { fontSize: 12, fontWeight: '900', letterSpacing: 1.4 },
   title: { fontSize: 28, fontWeight: '900' },
-  subtitle: { color: COLORS.textSecondary, lineHeight: 21 },
+  subtitle: { lineHeight: 21 },
   list: { gap: 14 },
   card: {
     padding: 18,
     borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.03)',
     borderWidth: 1,
-    borderColor: COLORS.border,
     gap: 16,
   },
   cardHeader: { flexDirection: 'row', gap: 14, alignItems: 'center' },
   iconWrap: { width: 50, height: 50, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   copy: { flex: 1, gap: 4 },
   cardTitle: { fontSize: 17, fontWeight: '900' },
-  cardSubtitle: { color: COLORS.textSecondary, lineHeight: 19 },
+  cardSubtitle: { lineHeight: 19 },
   actions: { flexDirection: 'row', gap: 10 },
   secondaryButton: {
     flex: 1,
@@ -112,8 +107,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surfaceStrong,
   },
   secondaryButtonText: { fontWeight: '800' },
   ghostButton: {
@@ -123,17 +116,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: COLORS.primaryStrong,
-    backgroundColor: 'rgba(56,189,248,0.08)',
   },
-  ghostButtonText: { fontWeight: '800', color: COLORS.primary },
+  ghostButtonText: { fontWeight: '800' },
   primaryButton: {
     flex: 1,
     minHeight: 48,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.primaryStrong,
     flexDirection: 'row',
     gap: 8,
   },
@@ -145,12 +135,10 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   metaText: {
-    color: COLORS.textMuted,
     fontSize: 11,
     lineHeight: 16,
   },
   metaDivider: {
-    color: COLORS.textMuted,
     fontSize: 11,
   },
 });

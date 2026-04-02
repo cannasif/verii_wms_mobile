@@ -1,7 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { COLORS, LAYOUT, RADII, SPACING } from '@/constants/theme';
+import { LAYOUT, SPACING } from '@/constants/theme';
 import { getPagedSummary } from '@/lib/paged';
 import { useTheme } from '@/providers/ThemeProvider';
 import { Text } from '@/components/ui/Text';
@@ -124,5 +124,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: SPACING.sm,
   },
-  footerText: { color: COLORS.textMuted, fontSize: 12, textAlign: 'center' },
+  footerText: { fontSize: 12, textAlign: 'center' },
 });

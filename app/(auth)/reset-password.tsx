@@ -7,13 +7,14 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft01Icon, LockKeyIcon, ViewIcon, ViewOffIcon } from 'hugeicons-react-native';
 import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Text';
-import { COLORS } from '@/constants/theme';
+import { useTheme } from '@/providers/ThemeProvider';
 import { createResetPasswordSchema, type ResetPasswordFormData } from '@/features/auth/schemas';
 import { useResetPassword } from '@/features/auth/hooks/useResetPassword';
 import { showError, showSuccess, showWarning, showMessage } from '@/lib/feedback';
 
 export default function ResetPasswordScreen(): React.ReactElement {
   const { t } = useTranslation();
+  const { theme } = useTheme();
   const { token } = useLocalSearchParams<{ token?: string }>();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -77,42 +78,50 @@ export default function ResetPasswordScreen(): React.ReactElement {
       name={name}
       render={({ field: { onChange, value } }) => (
         <View>
-          <View style={[styles.inputShell, errors[name] && styles.inputError]}>
+          <View
+            style={[
+              styles.inputShell,
+              {
+                borderColor: errors[name] ? theme.colors.danger : theme.colors.border,
+                backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.03)' : 'rgba(8,16,31,0.88)',
+              },
+            ]}
+          >
             <View style={styles.leading}>
-              <LockKeyIcon size={18} color={COLORS.primary} />
+              <LockKeyIcon size={18} color={theme.colors.primary} />
             </View>
             <TextInput
               value={value}
               onChangeText={onChange}
               secureTextEntry={!visible}
               placeholder={placeholder}
-              placeholderTextColor={COLORS.textMuted}
-              style={styles.input}
+              placeholderTextColor={theme.colors.textMuted}
+              style={[styles.input, { color: theme.colors.text }]}
             />
             <Pressable onPress={toggle}>
-              {visible ? <ViewOffIcon size={18} color={COLORS.textMuted} /> : <ViewIcon size={18} color={COLORS.textMuted} />}
+              {visible ? <ViewOffIcon size={18} color={theme.colors.textMuted} /> : <ViewIcon size={18} color={theme.colors.textMuted} />}
             </Pressable>
           </View>
-          {errors[name]?.message ? <Text style={styles.errorText}>{errors[name]?.message}</Text> : null}
+          {errors[name]?.message ? <Text style={[styles.errorText, { color: theme.colors.danger }]}>{errors[name]?.message}</Text> : null}
         </View>
       )}
     />
   );
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
       <Pressable onPress={() => router.back()} style={styles.backButton}>
-        <ArrowLeft01Icon size={18} color={COLORS.text} />
-        <Text style={styles.backText}>{t('common.back')}</Text>
+        <ArrowLeft01Icon size={18} color={theme.colors.text} />
+        <Text style={[styles.backText, { color: theme.colors.textSecondary }]}>{t('common.back')}</Text>
       </Pressable>
 
-      <View style={styles.hero}>
-        <Text style={styles.eyebrow}>{t('auth.resetPassword.title')}</Text>
+      <View style={[styles.hero, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <Text style={[styles.eyebrow, { color: theme.colors.accent }]}>{t('auth.resetPassword.title')}</Text>
         <Text style={styles.title}>{t('auth.resetPassword.title')}</Text>
-        <Text style={styles.subtitle}>{t('auth.resetPassword.description')}</Text>
+        <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{t('auth.resetPassword.description')}</Text>
       </View>
 
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: theme.colors.surfaceStrong, borderColor: theme.colors.border }]}>
         {renderPasswordField('newPassword', t('auth.resetPassword.newPasswordPlaceholder'), showPassword, () =>
           setShowPassword((prev) => !prev),
         )}
@@ -132,41 +141,34 @@ export default function ResetPasswordScreen(): React.ReactElement {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, padding: 20, paddingTop: 28, gap: 18, backgroundColor: COLORS.background },
+  screen: { flex: 1, padding: 20, paddingTop: 28, gap: 18 },
   backButton: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' },
-  backText: { color: COLORS.textSecondary, fontWeight: '800' },
+  backText: { fontWeight: '800' },
   hero: {
     gap: 8,
     padding: 20,
     borderRadius: 28,
-    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
-  eyebrow: { color: COLORS.accent, fontWeight: '900', fontSize: 12, textTransform: 'uppercase' },
-  title: { fontSize: 24, fontWeight: '900', color: COLORS.text },
-  subtitle: { color: COLORS.textSecondary, lineHeight: 21 },
+  eyebrow: { fontWeight: '900', fontSize: 12, textTransform: 'uppercase' },
+  title: { fontSize: 24, fontWeight: '900' },
+  subtitle: { lineHeight: 21 },
   card: {
     gap: 14,
     padding: 18,
     borderRadius: 24,
-    backgroundColor: COLORS.surfaceStrong,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   inputShell: {
     minHeight: 58,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: 'rgba(8,16,31,0.88)',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     gap: 12,
   },
-  inputError: { borderColor: COLORS.danger },
   leading: { width: 28, alignItems: 'center' },
-  input: { flex: 1, color: COLORS.text, fontSize: 15, paddingVertical: 14 },
-  errorText: { color: COLORS.danger, fontSize: 12, fontWeight: '600', marginTop: 6 },
+  input: { flex: 1, fontSize: 15, paddingVertical: 14 },
+  errorText: { fontSize: 12, fontWeight: '600', marginTop: 6 },
 });

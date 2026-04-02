@@ -4,7 +4,6 @@ import { router } from 'expo-router';
 import { ArrowLeft01Icon, ArrowRight01Icon } from 'hugeicons-react-native';
 import { useTranslation } from 'react-i18next';
 import { Text } from '@/components/ui/Text';
-import { COLORS } from '@/constants/theme';
 import { useTheme } from '@/providers/ThemeProvider';
 import type { WorkflowModuleConfig } from '../types/workflow';
 import { WorkflowIcon } from './WorkflowIcon';
@@ -57,36 +56,31 @@ export function WorkflowModuleScreen({ module }: { module: WorkflowModuleConfig 
 const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 132, gap: 16 },
   backButton: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' },
-  backText: { color: COLORS.textSecondary, fontWeight: '700' },
+  backText: { fontWeight: '700' },
   hero: {
     gap: 10,
     padding: 20,
     borderRadius: 28,
-    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   heroIcon: { width: 52, height: 52, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 28, fontWeight: '900' },
-  subtitle: { color: COLORS.textSecondary, lineHeight: 21 },
+  subtitle: { lineHeight: 21 },
   grid: { gap: 12 },
   actionCard: {
     padding: 18,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.03)',
     borderWidth: 1,
-    borderColor: COLORS.border,
     gap: 8,
   },
-  actionEyebrow: { color: COLORS.primary, fontSize: 12, fontWeight: '900', letterSpacing: 1 },
+  actionEyebrow: { fontSize: 12, fontWeight: '900', letterSpacing: 1 },
   actionTitle: { fontSize: 18, fontWeight: '900' },
-  actionText: { color: COLORS.textSecondary, lineHeight: 20 },
+  actionText: { lineHeight: 20 },
   primaryButton: {
     minHeight: 52,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.primaryStrong,
     flexDirection: 'row',
     gap: 8,
   },

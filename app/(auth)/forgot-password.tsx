@@ -7,13 +7,14 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft01Icon, Mail02Icon } from 'hugeicons-react-native';
 import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Text';
-import { COLORS } from '@/constants/theme';
+import { useTheme } from '@/providers/ThemeProvider';
 import { createForgotPasswordSchema, type ForgotPasswordFormData } from '@/features/auth/schemas';
 import { useForgotPassword } from '@/features/auth/hooks/useForgotPassword';
 import { showError, showSuccess, showWarning } from '@/lib/feedback';
 
 export default function ForgotPasswordScreen(): React.ReactElement {
   const { t } = useTranslation();
+  const { theme } = useTheme();
   const schema = useMemo(() => createForgotPasswordSchema(), []);
   const forgotPasswordMutation = useForgotPassword();
 
@@ -48,26 +49,34 @@ export default function ForgotPasswordScreen(): React.ReactElement {
   );
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
       <Pressable onPress={() => router.back()} style={styles.backButton}>
-        <ArrowLeft01Icon size={18} color={COLORS.text} />
-        <Text style={styles.backText}>{t('common.back')}</Text>
+        <ArrowLeft01Icon size={18} color={theme.colors.text} />
+        <Text style={[styles.backText, { color: theme.colors.textSecondary }]}>{t('common.back')}</Text>
       </Pressable>
 
-      <View style={styles.hero}>
-        <Text style={styles.eyebrow}>{t('auth.forgotPassword.title')}</Text>
+      <View style={[styles.hero, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <Text style={[styles.eyebrow, { color: theme.colors.accent }]}>{t('auth.forgotPassword.title')}</Text>
         <Text style={styles.title}>{t('auth.forgotPassword.title')}</Text>
-        <Text style={styles.subtitle}>{t('auth.forgotPassword.description')}</Text>
+        <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{t('auth.forgotPassword.description')}</Text>
       </View>
 
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: theme.colors.surfaceStrong, borderColor: theme.colors.border }]}>
         <Controller
           control={control}
           name="email"
           render={({ field: { onChange, value } }) => (
-            <View style={[styles.inputShell, errors.email && styles.inputError]}>
+            <View
+              style={[
+                styles.inputShell,
+                {
+                  borderColor: errors.email ? theme.colors.danger : theme.colors.border,
+                  backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.03)' : 'rgba(8,16,31,0.88)',
+                },
+              ]}
+            >
               <View style={styles.leading}>
-                <Mail02Icon size={18} color={COLORS.primary} />
+                <Mail02Icon size={18} color={theme.colors.primary} />
               </View>
               <TextInput
                 value={value}
@@ -76,20 +85,20 @@ export default function ForgotPasswordScreen(): React.ReactElement {
                 keyboardType="email-address"
                 autoCorrect={false}
                 placeholder={t('auth.forgotPassword.emailPlaceholder')}
-                placeholderTextColor={COLORS.textMuted}
-                style={styles.input}
+                placeholderTextColor={theme.colors.textMuted}
+                style={[styles.input, { color: theme.colors.text }]}
               />
             </View>
           )}
         />
 
-        {errors.email?.message ? <Text style={styles.errorText}>{errors.email.message}</Text> : null}
+        {errors.email?.message ? <Text style={[styles.errorText, { color: theme.colors.danger }]}>{errors.email.message}</Text> : null}
 
         <Button title={t('auth.forgotPassword.submitButton')} onPress={submit} loading={forgotPasswordMutation.isPending} />
 
         <Pressable style={styles.secondaryAction} onPress={() => router.back()}>
-          {forgotPasswordMutation.isPending ? <ActivityIndicator color={COLORS.textMuted} /> : null}
-          <Text style={styles.secondaryActionText}>{t('auth.forgotPassword.backToLogin')}</Text>
+          {forgotPasswordMutation.isPending ? <ActivityIndicator color={theme.colors.textMuted} /> : null}
+          <Text style={[styles.secondaryActionText, { color: theme.colors.textSecondary }]}>{t('auth.forgotPassword.backToLogin')}</Text>
         </Pressable>
       </View>
     </View>
@@ -97,43 +106,36 @@ export default function ForgotPasswordScreen(): React.ReactElement {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, padding: 20, paddingTop: 28, gap: 18, backgroundColor: COLORS.background },
+  screen: { flex: 1, padding: 20, paddingTop: 28, gap: 18 },
   backButton: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' },
-  backText: { color: COLORS.textSecondary, fontWeight: '800' },
+  backText: { fontWeight: '800' },
   hero: {
     gap: 8,
     padding: 20,
     borderRadius: 28,
-    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
-  eyebrow: { color: COLORS.accent, fontWeight: '900', fontSize: 12, textTransform: 'uppercase' },
-  title: { fontSize: 24, fontWeight: '900', color: COLORS.text },
-  subtitle: { color: COLORS.textSecondary, lineHeight: 21 },
+  eyebrow: { fontWeight: '900', fontSize: 12, textTransform: 'uppercase' },
+  title: { fontSize: 24, fontWeight: '900' },
+  subtitle: { lineHeight: 21 },
   card: {
     gap: 14,
     padding: 18,
     borderRadius: 24,
-    backgroundColor: COLORS.surfaceStrong,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   inputShell: {
     minHeight: 58,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: 'rgba(8,16,31,0.88)',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     gap: 12,
   },
-  inputError: { borderColor: COLORS.danger },
   leading: { width: 28, alignItems: 'center' },
-  input: { flex: 1, color: COLORS.text, fontSize: 15, paddingVertical: 14 },
-  errorText: { color: COLORS.danger, fontSize: 12, fontWeight: '600', marginTop: -6 },
+  input: { flex: 1, fontSize: 15, paddingVertical: 14 },
+  errorText: { fontSize: 12, fontWeight: '600', marginTop: -6 },
   secondaryAction: { alignItems: 'center', justifyContent: 'center', minHeight: 44, gap: 6 },
-  secondaryActionText: { color: COLORS.textSecondary, fontWeight: '700' },
+  secondaryActionText: { fontWeight: '700' },
 });

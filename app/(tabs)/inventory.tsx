@@ -8,9 +8,10 @@ import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { ScreenState } from '@/components/ui/ScreenState';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { Text } from '@/components/ui/Text';
-import { COLORS, RADII, SPACING } from '@/constants/theme';
+import { RADII, SPACING } from '@/constants/theme';
 import { workflowCreateApi } from '@/features/workflow-create/api';
 import { normalizeError } from '@/lib/errors';
+import { useTheme } from '@/providers/ThemeProvider';
 
 function formatNumber(value: number, language: string): string {
   return new Intl.NumberFormat(language === 'en' ? 'en-US' : 'tr-TR').format(value);
@@ -18,6 +19,7 @@ function formatNumber(value: number, language: string): string {
 
 export default function InventoryScreen(): React.ReactElement {
   const { t, i18n } = useTranslation();
+  const { theme } = useTheme();
 
   const productsQuery = useQuery({
     queryKey: ['inventory', 'products'],
@@ -50,9 +52,9 @@ export default function InventoryScreen(): React.ReactElement {
       <ScreenHeader title={t('screens.inventory.title')} subtitle={t('screens.inventory.subtitle')} />
 
       <SectionCard style={styles.heroCard}>
-        <WarehouseIcon size={24} color={COLORS.accent} />
+        <WarehouseIcon size={24} color={theme.colors.accent} />
         <Text style={styles.heroTitle}>{t('screens.inventory.heroTitle')}</Text>
-        <Text style={styles.heroText}>{t('screens.inventory.heroText')}</Text>
+        <Text style={[styles.heroText, { color: theme.colors.textSecondary }]}>{t('screens.inventory.heroText')}</Text>
       </SectionCard>
 
       {isLoading ? (
@@ -71,14 +73,14 @@ export default function InventoryScreen(): React.ReactElement {
       ) : (
         <View style={styles.statsRow}>
           <SectionCard style={styles.smallCard}>
-            <PackageSearchIcon size={20} color={COLORS.primary} />
+            <PackageSearchIcon size={20} color={theme.colors.primary} />
             <Text style={styles.value}>{numberFormatter(visibleStockCount)}</Text>
-            <Text style={styles.label}>{t('screens.inventory.visibleStock')}</Text>
+            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>{t('screens.inventory.visibleStock')}</Text>
           </SectionCard>
           <SectionCard style={styles.smallCard}>
-            <Alert02Icon size={20} color={COLORS.danger} />
+            <Alert02Icon size={20} color={theme.colors.danger} />
             <Text style={styles.value}>{numberFormatter(warehouseCount)}</Text>
-            <Text style={styles.label}>{t('screens.inventory.warehouseCount')}</Text>
+            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>{t('screens.inventory.warehouseCount')}</Text>
           </SectionCard>
         </View>
       )}
@@ -92,9 +94,9 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
   },
   heroTitle: { fontSize: 18, fontWeight: '800' },
-  heroText: { color: COLORS.textSecondary, lineHeight: 20 },
+  heroText: { lineHeight: 20 },
   statsRow: { flexDirection: 'row', gap: SPACING.sm },
   smallCard: { flex: 1, gap: SPACING.xs, borderRadius: RADII.xl },
   value: { fontSize: 24, fontWeight: '900' },
-  label: { color: COLORS.textSecondary, lineHeight: 18 },
+  label: { lineHeight: 18 },
 });

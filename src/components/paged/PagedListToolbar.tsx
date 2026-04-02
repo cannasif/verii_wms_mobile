@@ -2,7 +2,6 @@ import React from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { FilterHorizontalIcon, RefreshIcon, Search01Icon } from 'hugeicons-react-native';
 import { useTranslation } from 'react-i18next';
-import { COLORS } from '@/constants/theme';
 import { useTheme } from '@/providers/ThemeProvider';
 import { Text } from '@/components/ui/Text';
 
@@ -41,7 +40,7 @@ export function PagedListToolbar({
           style={[styles.input, { color: theme.colors.text }]}
           returnKeyType="search"
         />
-        <Pressable onPress={onSubmit} style={({ pressed }) => [styles.searchButton, pressed && styles.pressed]}>
+        <Pressable onPress={onSubmit} style={({ pressed }) => [styles.searchButton, { backgroundColor: theme.mode === 'light' ? 'rgba(2,132,199,0.10)' : 'rgba(56,189,248,0.14)' }, pressed && styles.pressed]}>
           <Text style={[styles.searchButtonText, { color: theme.colors.primary }]}>{t('paged.search')}</Text>
         </Pressable>
       </View>
@@ -75,8 +74,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: 'rgba(255,255,255,0.04)',
     borderRadius: 18,
     paddingLeft: 14,
     paddingRight: 8,
@@ -84,20 +81,11 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: COLORS.text,
     fontSize: 15,
     paddingVertical: 12,
   },
-  searchButton: {
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: 'rgba(56,189,248,0.14)',
-  },
-  searchButtonText: {
-    color: COLORS.primary,
-    fontWeight: '800',
-  },
+  searchButton: { borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 },
+  searchButtonText: { fontWeight: '800' },
   actionsRow: {
     flexDirection: 'row',
     gap: 10,
@@ -111,13 +99,8 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: 'rgba(255,255,255,0.03)',
   },
-  secondaryActionText: {
-    color: COLORS.textSecondary,
-    fontWeight: '700',
-  },
+  secondaryActionText: { fontWeight: '700' },
   badge: {
     minWidth: 22,
     height: 22,
@@ -125,13 +108,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 11,
-    backgroundColor: COLORS.primary,
   },
-  badgeText: {
-    color: COLORS.background,
-    fontWeight: '900',
-    fontSize: 11,
-  },
+  badgeText: { fontWeight: '900', fontSize: 11 },
   pressed: {
     opacity: 0.88,
   },
