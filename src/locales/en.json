@@ -233,13 +233,14 @@
     },
     "profile": {
       "title": "Profile and session",
-      "subtitle": "Manage user, branch, and session details securely from this screen.",
-      "user": "User",
-      "email": "Email",
-      "branch": "Branch",
-      "noBranch": "No branch selected",
-      "userFallback": "Operator"
-    }
+    "subtitle": "Manage user, branch, and session details securely from this screen.",
+    "user": "User",
+    "email": "Email",
+    "branch": "Branch",
+    "version": "Version",
+    "noBranch": "No branch selected",
+    "userFallback": "Operator"
+  }
   },
   "settings": {
     "title": "Settings",
@@ -257,6 +258,26 @@
     "apiUrlEmptyError": "API URL cannot be empty.",
     "apiUrlInvalidError": "Invalid API URL.",
     "cancel": "Cancel"
+  },
+  "updates": {
+    "availableTitle": "Update available",
+    "forceTitle": "Update required",
+    "description": "New version: {{version}}\n\nNotes: {{notes}}",
+    "noNotes": "No release notes provided.",
+    "installNow": "Update",
+    "details": "Details",
+    "viewNotes": "View release notes",
+    "notesTitle": "Release notes",
+    "notesSubtitle": "Read what changed in the latest published version from this screen.",
+    "installedVersion": "Installed version",
+    "latestVersionLabel": "Latest version: {{version}}",
+    "publishedAt": "Published at: {{value}}",
+    "loadingTitle": "Loading release notes",
+    "loadingDescription": "Preparing the latest APK info and release notes.",
+    "errorTitle": "Release notes could not be loaded",
+    "errorDescription": "The latest version info is not available right now.",
+    "later": "Later",
+    "openFailed": "The update link could not be opened."
   },
   "collectionInfo": {
     "title": "Header Details",

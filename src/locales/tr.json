@@ -233,13 +233,14 @@
     },
     "profile": {
       "title": "Profil ve oturum",
-      "subtitle": "Kullanıcı, şube ve oturum bilgilerini bu ekrandan güvenle yönetin.",
-      "user": "Kullanıcı",
-      "email": "E-posta",
-      "branch": "Şube",
-      "noBranch": "Şube seçilmedi",
-      "userFallback": "Operatör"
-    }
+    "subtitle": "Kullanıcı, şube ve oturum bilgilerini bu ekrandan güvenle yönetin.",
+    "user": "Kullanıcı",
+    "email": "E-posta",
+    "branch": "Şube",
+    "version": "Versiyon",
+    "noBranch": "Şube seçilmedi",
+    "userFallback": "Operatör"
+  }
   },
   "settings": {
     "title": "Ayarlar",
@@ -257,6 +258,26 @@
     "apiUrlEmptyError": "API URL boş olamaz.",
     "apiUrlInvalidError": "Geçersiz API URL.",
     "cancel": "İptal"
+  },
+  "updates": {
+    "availableTitle": "Yeni surum hazir",
+    "forceTitle": "Guncelleme gerekli",
+    "description": "Yeni surum: {{version}}\n\nNotlar: {{notes}}",
+    "noNotes": "Surum notu bulunmuyor.",
+    "installNow": "Guncelle",
+    "details": "Detaylar",
+    "viewNotes": "Surum notlarini goruntule",
+    "notesTitle": "Surum notlari",
+    "notesSubtitle": "Yayinlanan son surumde nelerin degistigini bu ekrandan okuyabilirsiniz.",
+    "installedVersion": "Yuklu surum",
+    "latestVersionLabel": "Son surum: {{version}}",
+    "publishedAt": "Yayin tarihi: {{value}}",
+    "loadingTitle": "Surum notlari yukleniyor",
+    "loadingDescription": "Guncel APK bilgisi ve yayin notlari hazirlaniyor.",
+    "errorTitle": "Surum notlari alinamadi",
+    "errorDescription": "Guncel surum bilgisi su anda getirilemedi.",
+    "later": "Daha sonra",
+    "openFailed": "Guncelleme baglantisi acilamadi."
   },
   "collectionInfo": {
     "title": "Üst Bilgiler",

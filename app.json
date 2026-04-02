@@ -3,6 +3,9 @@
     "name": "VERII WMS Mobile",
     "slug": "verii-wms-mobile",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "orientation": "portrait",
     "icon": "./assets/v3logo.png",
     "scheme": "verii-wms-mobile",
@@ -14,9 +17,11 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.v3rii.veriiwmsmobile"
+      "bundleIdentifier": "com.v3rii.veriiwmsmobile",
+      "buildNumber": "1"
     },
     "android": {
+      "versionCode": 1,
       "package": "com.v3rii.veriiwmsmobile",
       "adaptiveIcon": {
         "foregroundImage": "./assets/v3logo.png",
