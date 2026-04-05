@@ -1,3 +1,12 @@
+import type {
+  BaseDocumentHeaderRequest,
+  BaseDocumentImportLineRequest,
+  BaseDocumentLineRequest,
+  BaseSelectedStockItem,
+  BaseWorkflowOrder,
+  BaseWorkflowOrderItem,
+} from '@/types/document-models';
+
 export type ReceiptMode = 'order' | 'stock';
 
 export interface GoodsReceiptFormValues {
@@ -6,10 +15,12 @@ export interface GoodsReceiptFormValues {
   projectCode: string;
   isInvoice: boolean;
   customerId: string;
+  customerRefId?: number;
   notes: string;
 }
 
 export interface Customer {
+  id: number;
   cariKod: string;
   cariIsim: string;
 }
@@ -20,51 +31,28 @@ export interface Project {
 }
 
 export interface Warehouse {
+  id: number;
   depoKodu: number;
   depoIsmi: string;
 }
 
 export interface Product {
+  id: number;
   stokKodu: string;
   stokAdi: string;
   olcuBr1: string;
 }
 
-export interface Order {
-  mode: string;
-  siparisNo: string;
-  orderID: number | null;
-  customerCode: string;
-  customerName: string;
-  branchCode: number;
-  targetWh: number;
-  projectCode: string | null;
-  orderDate: string;
-  orderedQty: number;
-  deliveredQty: number;
-  remainingHamax: number;
-  plannedQtyAllocated: number;
-  remainingForImport: number;
+export interface YapKodOption {
+  id: number;
+  yapKod: string;
+  yapAcik: string;
+  yplndrStokKod?: string;
 }
 
-export interface OrderItem {
-  id?: string;
-  mode: string;
-  siparisNo: string;
-  orderID: number;
-  stockCode: string;
-  stockName: string;
-  customerCode: string;
-  customerName: string;
-  branchCode: number;
-  targetWh: number;
-  projectCode: string;
-  orderDate: string;
-  orderedQty: number;
-  deliveredQty: number;
-  remainingHamax: number;
-  plannedQtyAllocated: number;
-  remainingForImport: number;
+export interface Order extends BaseWorkflowOrder {}
+
+export interface OrderItem extends BaseWorkflowOrderItem {
   productCode?: string;
   productName?: string;
   quantity?: number;
@@ -72,6 +60,8 @@ export interface OrderItem {
 }
 
 export interface SelectedOrderItem extends OrderItem {
+  stockId?: number;
+  yapKodId?: number;
   receiptQuantity: number;
   isSelected: boolean;
   serialNo?: string;
@@ -81,11 +71,7 @@ export interface SelectedOrderItem extends OrderItem {
   warehouseId?: number;
 }
 
-export interface SelectedStockItem {
-  id: string;
-  stockCode: string;
-  stockName: string;
-  unit: string;
+export interface SelectedStockItem extends BaseSelectedStockItem {
   receiptQuantity: number;
   isSelected: boolean;
   serialNo?: string;
@@ -98,18 +84,7 @@ export interface SelectedStockItem {
 export type SelectedReceiptItem = SelectedOrderItem | SelectedStockItem;
 
 export interface BulkCreateRequest {
-  header: {
-    branchCode: string;
-    projectCode?: string;
-    orderId?: string;
-    documentType: string;
-    yearCode: string;
-    description1?: string;
-    description2?: string;
-    priorityLevel?: number;
-    plannedDate: string;
-    isPlanned: boolean;
-    customerCode: string;
+  header: BaseDocumentHeaderRequest & {
     returnCode: boolean;
     ocrSource: boolean;
     description3?: string;
@@ -117,19 +92,8 @@ export interface BulkCreateRequest {
     description5?: string;
   };
   documents?: Array<{ base64: string }> | null;
-  lines?: Array<{
-    clientKey: string;
-    stockCode: string;
-    quantity: number;
-    unit?: string;
-    erpOrderNo?: string;
-    erpOrderId?: string;
-    description?: string;
-  }>;
-  importLines?: Array<{
-    lineClientKey: string | null;
-    clientKey: string;
-    stockCode: string;
+  lines?: Array<BaseDocumentLineRequest>;
+  importLines?: Array<BaseDocumentImportLineRequest & {
     configurationCode?: string;
     description1?: string;
     description2?: string;

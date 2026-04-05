@@ -1,8 +1,10 @@
 import type { WorkflowModuleKey } from '@/features/operations/types/workflow';
+import type { BaseSelectedStockItem, BaseWorkflowOrder, BaseWorkflowOrderItem } from '@/types/document-models';
 
 export type CreateWorkflowMode = 'order' | 'free';
 
 export interface CustomerOption {
+  id: number;
   cariKod: string;
   cariIsim: string;
 }
@@ -13,11 +15,13 @@ export interface ProjectOption {
 }
 
 export interface WarehouseOption {
+  id: number;
   depoKodu: number;
   depoIsmi: string;
 }
 
 export interface ProductOption {
+  id: number;
   stokKodu: string;
   stokAdi: string;
   olcuBr1: string;
@@ -32,6 +36,13 @@ export interface ProductBarcodeOption {
   yapAcik: string | null;
 }
 
+export interface YapKodOption {
+  id: number;
+  yapKod: string;
+  yapAcik: string;
+  yplndrStokKod?: string;
+}
+
 export interface ActiveUserOption {
   id: number;
   username: string;
@@ -41,48 +52,18 @@ export interface ActiveUserOption {
   fullName: string;
 }
 
-export interface WorkflowOrder {
-  mode: string;
-  siparisNo: string;
-  orderID: number | null;
-  customerCode: string;
-  customerName: string;
-  branchCode: number;
-  targetWh: number;
-  projectCode: string | null;
-  orderDate: string;
-  orderedQty: number;
-  deliveredQty: number;
-  remainingHamax: number;
-  plannedQtyAllocated: number;
-  remainingForImport: number;
-}
+export interface WorkflowOrder extends BaseWorkflowOrder {}
 
-export interface WorkflowOrderItem {
-  id?: string;
-  mode: string;
-  siparisNo: string;
-  orderID: number;
-  stockCode: string;
-  stockName: string;
+export interface WorkflowOrderItem extends BaseWorkflowOrderItem {
+  yapKodId?: number;
   yapKod?: string;
   yapAcik?: string;
-  customerCode: string;
-  customerName: string;
-  branchCode: number;
-  targetWh: number;
-  projectCode: string;
-  orderDate: string;
-  orderedQty: number;
-  deliveredQty: number;
-  remainingHamax: number;
-  plannedQtyAllocated: number;
-  remainingForImport: number;
   unit?: string;
 }
 
 export interface SelectedWorkflowOrderItem extends WorkflowOrderItem {
   id: string;
+  stockId?: number;
   transferQuantity: number;
   isSelected: boolean;
   serialNo?: string;
@@ -95,11 +76,7 @@ export interface SelectedWorkflowOrderItem extends WorkflowOrderItem {
   targetCellCode?: string;
 }
 
-export interface SelectedWorkflowStockItem {
-  id: string;
-  stockCode: string;
-  stockName: string;
-  unit: string;
+export interface SelectedWorkflowStockItem extends BaseSelectedStockItem {
   yapKod?: string;
   yapAcik?: string;
   scannedBarcode?: string;
@@ -122,8 +99,11 @@ export interface WorkflowCreateFormValues {
   documentNo: string;
   projectCode: string;
   customerId: string;
+  customerRefId?: number;
   sourceWarehouse: string;
+  sourceWarehouseRefId?: number;
   targetWarehouse: string;
+  targetWarehouseRefId?: number;
   notes: string;
   userIds: number[];
   operationType: string;

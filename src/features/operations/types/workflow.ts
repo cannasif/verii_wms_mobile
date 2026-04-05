@@ -1,4 +1,11 @@
 import type { FilterColumnConfig } from '@/types/paged';
+import type {
+  BaseWorkflowHeaderDetail,
+  BaseWorkflowImportLineDetail,
+  BaseWorkflowLineDetail,
+  BaseWorkflowLineSerialDetail,
+  BaseWorkflowRouteDetail,
+} from './detail-models';
 
 export type WorkflowModuleKey =
   | 'goods-receipt'
@@ -26,8 +33,7 @@ export interface WorkflowAssignedItem {
   isPendingApproval?: boolean;
 }
 
-export interface WorkflowHeaderDetail {
-  id: number;
+export interface WorkflowHeaderDetail extends BaseWorkflowHeaderDetail {
   branchCode?: string | null;
   documentNo?: string | null;
   documentType?: string | null;
@@ -46,60 +52,24 @@ export interface WorkflowHeaderDetail {
   createdByFullUser?: string | null;
 }
 
-export interface WorkflowImportLineDetail {
-  id: number;
-  stockCode: string;
-  stockName?: string | null;
-  yapKod?: string | null;
+export interface WorkflowImportLineDetail extends BaseWorkflowImportLineDetail {
   yapAcik?: string | null;
-  description1?: string | null;
-  description2?: string | null;
-  description?: string | null;
   lineId?: number | null;
   routeId?: number | null;
 }
 
-export interface WorkflowLineDetail {
-  id: number;
-  stockCode: string;
-  stockName?: string | null;
-  yapKod?: string | null;
-  yapAcik?: string | null;
-  quantity: number;
-  unit?: string | null;
-  description?: string | null;
+export interface WorkflowLineDetail extends BaseWorkflowLineDetail {
   erpOrderNo?: string | null;
   erpOrderId?: string | null;
 }
 
-export interface WorkflowLineSerialDetail {
-  id: number;
+export interface WorkflowLineSerialDetail extends BaseWorkflowLineSerialDetail {
   lineId: number;
-  quantity: number;
-  serialNo?: string | null;
-  serialNo2?: string | null;
-  serialNo3?: string | null;
-  serialNo4?: string | null;
-  sourceCellCode?: string | null;
-  targetCellCode?: string | null;
 }
 
-export interface WorkflowRouteDetail {
-  id: number;
+export interface WorkflowRouteDetail extends BaseWorkflowRouteDetail {
   importLineId: number;
-  stockCode: string;
-  quantity: number;
-  scannedBarcode?: string | null;
-  serialNo?: string | null;
-  serialNo2?: string | null;
-  serialNo3?: string | null;
-  serialNo4?: string | null;
-  sourceWarehouse?: number | null;
-  targetWarehouse?: number | null;
-  sourceCellCode?: string | null;
-  targetCellCode?: string | null;
   yapKod?: string | null;
-  description?: string | null;
 }
 
 export interface WorkflowTerminalLineDetail {

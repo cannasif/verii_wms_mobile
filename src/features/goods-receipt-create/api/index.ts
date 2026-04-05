@@ -15,6 +15,7 @@ import type {
   SelectedReceiptItem,
   SelectedStockItem,
   Warehouse,
+  YapKodOption,
 } from '../types';
 
 function generateGuid(): string {
@@ -51,7 +52,9 @@ function buildGoodsReceiptBulkCreateRequest(
         const orderItem = item as SelectedOrderItem;
         return {
           clientKey: generateGuid(),
+          stockId: orderItem.stockId,
           stockCode: orderItem.stockCode || orderItem.productCode || '',
+          yapKodId: orderItem.yapKodId,
           quantity: orderItem.orderedQty || 0,
           unit: orderItem.unit || undefined,
           erpOrderNo: orderItem.siparisNo || undefined,
@@ -69,7 +72,9 @@ function buildGoodsReceiptBulkCreateRequest(
     return {
       lineClientKey: correspondingLine?.clientKey || null,
       clientKey,
+      stockId: item.stockId,
       stockCode: item.stockCode,
+      yapKodId: item.yapKodId,
       configurationCode: item.configCode || undefined,
       description1: item.stockName || undefined,
       description2: undefined,
@@ -136,6 +141,7 @@ function buildGoodsReceiptBulkCreateRequest(
       priorityLevel: 0,
       plannedDate,
       isPlanned: false,
+      customerId: formData.customerRefId,
       customerCode: formData.customerId || '',
       returnCode: false,
       ocrSource: false,
@@ -160,9 +166,40 @@ async function getErpPagedData<T>(url: string, options?: ApiRequestOptions): Pro
   return response.data.data.data;
 }
 
+interface WmsCustomerLookupDto {
+  id: number;
+  customerCode: string;
+  customerName: string;
+}
+
+interface WmsWarehouseLookupDto {
+  id: number;
+  warehouseCode: number;
+  warehouseName: string;
+}
+
+interface WmsStockLookupDto {
+  id: number;
+  erpStockCode: string;
+  stockName: string;
+  unit?: string | null;
+}
+
+interface WmsYapKodLookupDto {
+  id: number;
+  yapKod: string;
+  yapAcik: string;
+  yplndrStokKod?: string | null;
+}
+
 export const goodsReceiptCreateApi = {
   async getCustomers(options?: ApiRequestOptions): Promise<Customer[]> {
-    return getErpPagedData<Customer>('/api/Erp/customers/paged', options);
+    const customers = await getErpPagedData<WmsCustomerLookupDto>('/api/Customer/paged', options);
+    return customers.map((customer) => ({
+      id: customer.id,
+      cariKod: customer.customerCode,
+      cariIsim: customer.customerName,
+    }));
   },
 
   async getProjects(options?: ApiRequestOptions): Promise<Project[]> {
@@ -170,11 +207,32 @@ export const goodsReceiptCreateApi = {
   },
 
   async getWarehouses(options?: ApiRequestOptions): Promise<Warehouse[]> {
-    return getErpPagedData<Warehouse>('/api/Erp/warehouses/paged', options);
+    const warehouses = await getErpPagedData<WmsWarehouseLookupDto>('/api/Warehouse/paged', options);
+    return warehouses.map((warehouse) => ({
+      id: warehouse.id,
+      depoKodu: warehouse.warehouseCode,
+      depoIsmi: warehouse.warehouseName,
+    }));
   },
 
   async getProducts(options?: ApiRequestOptions): Promise<Product[]> {
-    return getErpPagedData<Product>('/api/Erp/products/paged', options);
+    const products = await getErpPagedData<WmsStockLookupDto>('/api/Stock/paged', options);
+    return products.map((product) => ({
+      id: product.id,
+      stokKodu: product.erpStockCode,
+      stokAdi: product.stockName,
+      olcuBr1: product.unit || '',
+    }));
+  },
+
+  async getYapKodlar(options?: ApiRequestOptions): Promise<YapKodOption[]> {
+    const items = await getErpPagedData<WmsYapKodLookupDto>('/api/YapKod/paged', options);
+    return items.map((item) => ({
+      id: item.id,
+      yapKod: item.yapKod,
+      yapAcik: item.yapAcik,
+      yplndrStokKod: item.yplndrStokKod || undefined,
+    }));
   },
 
   async getOrdersByCustomer(customerCode: string, options?: ApiRequestOptions): Promise<Order[]> {

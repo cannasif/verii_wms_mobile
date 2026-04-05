@@ -1,4 +1,8 @@
 import type { ApiRequestOptions } from '@/lib/request-utils';
+import type {
+  BaseWorkflowImportLineDetail,
+  BaseWorkflowRouteDetail,
+} from '@/features/operations/types/detail-models';
 
 export interface CollectionStockBarcode {
   barkod: string;
@@ -17,16 +21,9 @@ export interface CollectionLine {
   unit: string;
 }
 
-export interface CollectionRoute {
-  id: number;
-  scannedBarcode?: string | null;
-  quantity: number;
-  serialNo?: string | null;
-  stockCode?: string | null;
-  description?: string | null;
-}
+export interface CollectionRoute extends BaseWorkflowRouteDetail {}
 
-export interface CollectionImportLine {
+export interface CollectionImportLine extends Pick<BaseWorkflowImportLineDetail, 'lineId'> {
   lineId: number;
 }
 

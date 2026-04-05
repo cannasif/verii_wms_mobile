@@ -11,6 +11,7 @@ import type {
   ProductBarcodeOption,
   ProductOption,
   ProjectOption,
+  YapKodOption,
   SelectedWorkflowItem,
   WarehouseOption,
   WorkflowCreateFormValues,
@@ -60,7 +61,9 @@ function buildTransferRequest(
     lines.push({
       clientKey,
       clientGuid,
+      stockId: item.stockId,
       stockCode: item.stockCode,
+      yapKodId: 'yapKodId' in item ? item.yapKodId : undefined,
       yapKod: '',
       orderId: 0,
       quantity: item.transferQuantity,
@@ -104,9 +107,12 @@ function buildTransferRequest(
       completedDate: now,
       documentNo: formData.documentNo,
       documentDate: formData.transferDate,
+      customerId: isFreeTransfer ? undefined : formData.customerRefId,
       customerCode: isFreeTransfer ? '' : (formData.customerId || ''),
       customerName: '',
+      sourceWarehouseId: isFreeTransfer ? formData.sourceWarehouseRefId : undefined,
       sourceWarehouse: isFreeTransfer ? (formData.sourceWarehouse || '') : (firstItemSourceWarehouse ? String(firstItemSourceWarehouse) : ''),
+      targetWarehouseId: formData.targetWarehouseRefId,
       targetWarehouse: formData.targetWarehouse,
       priority: '',
       type: isFreeTransfer ? 1 : 0,
@@ -130,7 +136,9 @@ function buildShipmentRequest(formData: WorkflowCreateFormValues, selectedItems:
     lines.push({
       clientKey,
       clientGuid,
+      stockId: item.stockId,
       stockCode: item.stockCode,
+      yapKodId: 'yapKodId' in item ? item.yapKodId : undefined,
       stockName: 'stockName' in item ? item.stockName : '',
       yapKod: 'yapKod' in item ? item.yapKod || '' : '',
       yapAcik: 'yapAcik' in item ? item.yapAcik || '' : '',
@@ -172,8 +180,10 @@ function buildShipmentRequest(formData: WorkflowCreateFormValues, selectedItems:
       completedDate: now,
       documentNo: formData.documentNo,
       documentDate: formData.transferDate,
+      customerId: formData.customerRefId,
       customerCode: formData.customerId || '',
       customerName: '',
+      sourceWarehouseId: formData.sourceWarehouseRefId,
       sourceWarehouse: formData.sourceWarehouse,
       targetWarehouse: '',
       priority: '',
@@ -202,7 +212,9 @@ function buildWarehouseRequest(
     lines.push({
       clientKey,
       clientGuid,
+      stockId: item.stockId,
       stockCode: item.stockCode,
+      yapKodId: 'yapKodId' in item ? item.yapKodId : undefined,
       stockName: 'stockName' in item ? item.stockName : '',
       yapKod: 'yapKod' in item ? item.yapKod || '' : '',
       yapAcik: 'yapAcik' in item ? item.yapAcik || '' : '',
@@ -244,9 +256,12 @@ function buildWarehouseRequest(
       completedDate: now,
       documentNo: formData.documentNo,
       documentDate: formData.transferDate,
+      customerId: formData.customerRefId,
       customerCode: formData.customerId || '',
       customerName: '',
+      sourceWarehouseId: direction === 'outbound' ? formData.sourceWarehouseRefId : undefined,
       sourceWarehouse: direction === 'outbound' ? formData.sourceWarehouse || '' : '',
+      targetWarehouseId: direction === 'inbound' ? formData.targetWarehouseRefId : undefined,
       targetWarehouse: direction === 'inbound' ? formData.targetWarehouse || '' : '',
       priority: '',
       ...(direction === 'inbound'
@@ -270,18 +285,42 @@ function buildWarehouseOutboundProcessRequest(
   const lines: Array<Record<string, unknown>> = [];
   const importLines: Array<Record<string, unknown>> = [];
   const routes: Array<Record<string, unknown>> = [];
+  const importLineGroups = new Map<string, { clientKey: string; clientGroupGuid: string }>();
 
   positiveItems.forEach((item) => {
     const lineClientKey = randomGuid();
     const lineGroupGuid = randomGuid();
-    const importLineClientKey = randomGuid();
-    const importLineGroupGuid = randomGuid();
+    const yapKod = 'yapKod' in item ? item.yapKod || '' : '';
+    const importGroupingKey = `${item.stockCode}__${yapKod}`;
+    let importLineGroup = importLineGroups.get(importGroupingKey);
+    if (!importLineGroup) {
+      importLineGroup = {
+        clientKey: randomGuid(),
+        clientGroupGuid: randomGuid(),
+      };
+      importLineGroups.set(importGroupingKey, importLineGroup);
+      importLines.push({
+        clientKey: importLineGroup.clientKey,
+        clientGroupGuid: importLineGroup.clientGroupGuid,
+        stockId: item.stockId,
+        stockCode: item.stockCode,
+        yapKodId: 'yapKodId' in item ? item.yapKodId : undefined,
+        yapKod,
+        quantity: item.transferQuantity,
+        unit: 'unit' in item ? item.unit || '' : '',
+        erpOrderNumber: '',
+        erpOrderNo: '',
+        erpOrderLineNumber: '',
+      });
+    }
 
     lines.push({
       clientKey: lineClientKey,
       clientGuid: lineGroupGuid,
+      stockId: item.stockId,
       stockCode: item.stockCode,
-      yapKod: 'yapKod' in item ? item.yapKod || '' : '',
+      yapKodId: 'yapKodId' in item ? item.yapKodId : undefined,
+      yapKod,
       quantity: item.transferQuantity,
       unit: 'unit' in item ? item.unit || '' : '',
       erpOrderNo: '',
@@ -289,33 +328,17 @@ function buildWarehouseOutboundProcessRequest(
       description: 'stockName' in item ? item.stockName || '' : '',
     });
 
-    importLines.push({
-      clientKey: importLineClientKey,
-      clientGroupGuid: importLineGroupGuid,
-      lineClientKey,
-      lineGroupGuid,
+    routes.push({
+      importLineClientKey: importLineGroup.clientKey,
+      importLineGroupGuid: importLineGroup.clientGroupGuid,
       stockCode: item.stockCode,
+      yapKod,
       quantity: item.transferQuantity,
-      unit: 'unit' in item ? item.unit || '' : '',
       serialNo: item.serialNo || '',
       serialNo2: item.serialNo2 || '',
       serialNo3: item.lotNo || '',
       serialNo4: item.batchNo || '',
-      scannedBarkod: 'scannedBarcode' in item ? item.scannedBarcode || item.stockCode : item.stockCode,
-      erpOrderNumber: '',
-      erpOrderNo: '',
-      erpOrderLineNumber: '',
-    });
-
-    routes.push({
-      lineClientKey,
-      lineGroupGuid,
-      importLineClientKey,
-      importLineGroupGuid,
-      stockCode: item.stockCode,
-      quantity: item.transferQuantity,
-      serialNo: item.serialNo || '',
-      serialNo2: item.serialNo2 || '',
+      scannedBarcode: 'scannedBarcode' in item ? item.scannedBarcode || item.stockCode : item.stockCode,
       sourceWarehouse,
       targetWarehouse: undefined,
       sourceCellCode: item.sourceCellCode || '',
@@ -340,7 +363,9 @@ function buildWarehouseOutboundProcessRequest(
       completedDate: now,
       documentNo: formData.documentNo,
       documentDate: formData.transferDate,
+      customerId: formData.customerRefId,
       customerCode: formData.customerId || '',
+      sourceWarehouseId: formData.sourceWarehouseRefId,
       sourceWarehouse: formData.sourceWarehouse || '',
       targetWarehouse: '',
       outboundType: formData.operationType || '',
@@ -368,7 +393,9 @@ function buildSubcontractingRequest(
     lines.push({
       clientKey,
       clientGuid,
+      stockId: item.stockId,
       stockCode: item.stockCode,
+      yapKodId: 'yapKodId' in item ? item.yapKodId : undefined,
       stockName: 'stockName' in item ? item.stockName : '',
       yapKod: 'yapKod' in item ? item.yapKod || '' : '',
       yapAcik: 'yapAcik' in item ? item.yapAcik || '' : '',
@@ -410,9 +437,12 @@ function buildSubcontractingRequest(
       completedDate: now,
       documentNo: formData.documentNo,
       documentDate: formData.transferDate,
+      customerId: formData.customerRefId,
       customerCode: formData.customerId || '',
       customerName: '',
+      sourceWarehouseId: formData.sourceWarehouseRefId,
       sourceWarehouse: formData.sourceWarehouse,
+      targetWarehouseId: formData.targetWarehouseRefId,
       targetWarehouse: formData.targetWarehouse,
       priority: '',
       type: 0,
@@ -473,16 +503,63 @@ function resolveFreeCreateEndpoint(moduleKey: WorkflowCreateModuleMeta['key']) {
 
 export const workflowCreateApi = {
   async getCustomers(options?: ApiRequestOptions): Promise<CustomerOption[]> {
-    return getErpPagedData<CustomerOption>('/api/Erp/customers/paged', 'workflowCreate.errors.customerLoad', options);
+    const customers = await getErpPagedData<{
+      id: number;
+      customerCode: string;
+      customerName: string;
+    }>('/api/Customer/paged', 'workflowCreate.errors.customerLoad', options);
+
+    return customers.map((customer) => ({
+      id: customer.id,
+      cariKod: customer.customerCode,
+      cariIsim: customer.customerName,
+    }));
   },
   async getProjects(options?: ApiRequestOptions): Promise<ProjectOption[]> {
     return getErpPagedData<ProjectOption>('/api/Erp/projects/paged', 'workflowCreate.errors.projectLoad', options);
   },
   async getWarehouses(options?: ApiRequestOptions): Promise<WarehouseOption[]> {
-    return getErpPagedData<WarehouseOption>('/api/Erp/warehouses/paged', 'workflowCreate.errors.warehouseLoad', options);
+    const warehouses = await getErpPagedData<{
+      id: number;
+      warehouseCode: number;
+      warehouseName: string;
+    }>('/api/Warehouse/paged', 'workflowCreate.errors.warehouseLoad', options);
+
+    return warehouses.map((warehouse) => ({
+      id: warehouse.id,
+      depoKodu: warehouse.warehouseCode,
+      depoIsmi: warehouse.warehouseName,
+    }));
   },
   async getProducts(options?: ApiRequestOptions): Promise<ProductOption[]> {
-    return getErpPagedData<ProductOption>('/api/Erp/products/paged', 'workflowCreate.errors.productLoad', options);
+    const products = await getErpPagedData<{
+      id: number;
+      erpStockCode: string;
+      stockName: string;
+      unit?: string | null;
+    }>('/api/Stock/paged', 'workflowCreate.errors.productLoad', options);
+
+    return products.map((product) => ({
+      id: product.id,
+      stokKodu: product.erpStockCode,
+      stokAdi: product.stockName,
+      olcuBr1: product.unit || '',
+    }));
+  },
+  async getYapKodlar(options?: ApiRequestOptions): Promise<YapKodOption[]> {
+    const items = await getErpPagedData<{
+      id: number;
+      yapKod: string;
+      yapAcik: string;
+      yplndrStokKod?: string | null;
+    }>('/api/YapKod/paged', 'workflowCreate.errors.productLoad', options);
+
+    return items.map((item) => ({
+      id: item.id,
+      yapKod: item.yapKod,
+      yapAcik: item.yapAcik,
+      yplndrStokKod: item.yplndrStokKod || undefined,
+    }));
   },
   async getStokBarcode(barcode: string, barcodeGroup: string = '1', options?: ApiRequestOptions): Promise<ProductBarcodeOption[]> {
     const response = await apiClient.get<ApiResponse<ProductBarcodeOption[]>>('/api/Erp/getStokBarcode', {

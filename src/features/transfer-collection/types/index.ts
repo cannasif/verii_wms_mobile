@@ -1,3 +1,8 @@
+import type {
+  BaseWorkflowImportLineDetail,
+  BaseWorkflowRouteDetail,
+} from '@/features/operations/types/detail-models';
+
 export interface AssignedTransferLine {
   id: number;
   stockCode: string;
@@ -44,16 +49,9 @@ export interface AddBarcodeRequest {
   targetCellCode: string;
 }
 
-export interface AssignedTransferRoute {
-  id: number;
-  scannedBarcode: string;
-  quantity: number;
-  serialNo: string;
-  stockCode: string;
-  description: string;
-}
+export interface AssignedTransferRoute extends BaseWorkflowRouteDetail {}
 
-export interface AssignedTransferImportLine {
+export interface AssignedTransferImportLine extends Pick<BaseWorkflowImportLineDetail, 'lineId'> {
   lineId: number;
 }
 

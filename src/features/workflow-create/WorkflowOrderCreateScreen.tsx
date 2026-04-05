@@ -233,7 +233,7 @@ export function WorkflowOrderCreateScreen({ module }: { module: WorkflowModuleCo
     setStockTab('stocks');
     setActiveOrderNumber(null);
     if (nextMode === 'free') {
-      setForm((prev) => ({ ...prev, customerId: '' }));
+      setForm((prev) => ({ ...prev, customerId: '', customerRefId: undefined }));
     }
   };
 
@@ -263,6 +263,7 @@ export function WorkflowOrderCreateScreen({ module }: { module: WorkflowModuleCo
     const safeCount = Math.max(1, Math.floor(count));
     const nextItems = Array.from({ length: safeCount }, () => ({
       id: 'stock-' + item.stokKodu + '-' + randomId(),
+      stockId: item.id,
       stockCode: item.stokKodu,
       stockName: item.stokAdi,
       unit: item.olcuBr1,
@@ -361,8 +362,10 @@ export function WorkflowOrderCreateScreen({ module }: { module: WorkflowModuleCo
   const handleWarehouseSelect = (warehouse: WarehouseOption) => {
     if (warehouseTarget === 'source') {
       setFormValue('sourceWarehouse', String(warehouse.depoKodu));
+      setFormValue('sourceWarehouseRefId', warehouse.id);
     } else if (warehouseTarget === 'target') {
       setFormValue('targetWarehouse', String(warehouse.depoKodu));
+      setFormValue('targetWarehouseRefId', warehouse.id);
     } else if (warehouseTarget) {
       updateSelectedItem(warehouseTarget, { sourceWarehouse: warehouse.depoKodu });
     }
@@ -514,7 +517,7 @@ export function WorkflowOrderCreateScreen({ module }: { module: WorkflowModuleCo
         selectedValue={form.customerId}
         getValue={(item) => item.cariKod}
         getLabel={(item) => item.cariIsim + ' (' + item.cariKod + ')'}
-        onSelect={(item) => { setFormValue('customerId', item.cariKod); setSelectedItems([]); setActiveOrderNumber(null); }}
+        onSelect={(item) => { setFormValue('customerId', item.cariKod); setFormValue('customerRefId', item.id); setSelectedItems([]); setActiveOrderNumber(null); }}
         onClose={() => setCustomerSheetOpen(false)}
       />
 

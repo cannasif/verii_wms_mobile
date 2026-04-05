@@ -318,6 +318,7 @@ export function GoodsReceiptCreateScreen(): React.ReactElement {
     const safeCount = Math.max(1, Math.floor(count));
     const nextItems = Array.from({ length: safeCount }, () => ({
       id: `stock-${item.stokKodu}-${randomId()}`,
+      stockId: item.id,
       stockCode: item.stokKodu,
       stockName: item.stokAdi,
       unit: item.olcuBr1,
@@ -558,6 +559,7 @@ export function GoodsReceiptCreateScreen(): React.ReactElement {
         getLabel={(item) => `${item.cariIsim} (${item.cariKod})`}
         onSelect={(item) => {
           setFormValue('customerId', item.cariKod);
+          setFormValue('customerRefId', item.id);
           resetStepTwoState();
           setCurrentStep(1);
         }}

@@ -1,3 +1,8 @@
+import type {
+  BaseWorkflowImportLineDetail,
+  BaseWorkflowRouteDetail,
+} from '@/features/operations/types/detail-models';
+
 export interface AssignedGrLine {
   id: number;
   stockCode: string;
@@ -51,19 +56,9 @@ export interface AddBarcodeRequest {
   targetCellCode: string;
 }
 
-export interface GrImportRoute {
-  id: number;
-  scannedBarcode?: string;
-  quantity: number;
-  stockCode?: string | null;
-  description?: string | null;
-  serialNo?: string | null;
-  serialNo2?: string | null;
-  serialNo3?: string | null;
-  serialNo4?: string | null;
-}
+export interface GrImportRoute extends BaseWorkflowRouteDetail {}
 
-export interface GrImportLine {
+export interface GrImportLine extends Pick<BaseWorkflowImportLineDetail, 'lineId'> {
   lineId: number;
 }
 
