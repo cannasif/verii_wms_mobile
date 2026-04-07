@@ -68,28 +68,40 @@ function isStockItem(item: SelectedWorkflowItem): item is SelectedWorkflowStockI
 function getModuleMeta(module: WorkflowModuleConfig): WorkflowCreateModuleMeta {
   switch (module.key) {
     case 'transfer':
-      return { key: module.key, supportsFreeMode: true, requiresCustomer: false, requiresSourceWarehouse: false, requiresTargetWarehouse: true, requiresOperationType: false, orderOnlyCustomerFlow: true };
+      return { key: module.key, supportsFreeMode: true, requiresCustomer: true, requiresSourceWarehouse: false, requiresTargetWarehouse: true, requiresOperationType: false, orderOnlyCustomerFlow: true };
     case 'warehouse-inbound':
-      return { key: module.key, supportsFreeMode: false, requiresCustomer: true, requiresSourceWarehouse: false, requiresTargetWarehouse: true, requiresOperationType: true, orderOnlyCustomerFlow: true };
+      return { key: module.key, supportsFreeMode: true, requiresCustomer: true, requiresSourceWarehouse: false, requiresTargetWarehouse: true, requiresOperationType: true, orderOnlyCustomerFlow: true };
     case 'warehouse-outbound':
       return { key: module.key, supportsFreeMode: true, requiresCustomer: true, requiresSourceWarehouse: true, requiresTargetWarehouse: false, requiresOperationType: true, orderOnlyCustomerFlow: true };
     case 'shipment':
-      return { key: module.key, supportsFreeMode: false, requiresCustomer: true, requiresSourceWarehouse: true, requiresTargetWarehouse: false, requiresOperationType: false, orderOnlyCustomerFlow: true };
+      return { key: module.key, supportsFreeMode: true, requiresCustomer: true, requiresSourceWarehouse: true, requiresTargetWarehouse: false, requiresOperationType: false, orderOnlyCustomerFlow: true };
     case 'subcontracting-issue':
     case 'subcontracting-receipt':
-      return { key: module.key, supportsFreeMode: false, requiresCustomer: true, requiresSourceWarehouse: true, requiresTargetWarehouse: true, requiresOperationType: false, orderOnlyCustomerFlow: true };
+      return { key: module.key, supportsFreeMode: true, requiresCustomer: true, requiresSourceWarehouse: true, requiresTargetWarehouse: true, requiresOperationType: false, orderOnlyCustomerFlow: true };
     default:
       throw new Error('Unsupported module');
   }
 }
 
-export function WorkflowOrderCreateScreen({ module }: { module: WorkflowModuleConfig }): React.ReactElement {
+export function WorkflowOrderCreateScreen({
+  module,
+  forcedMode,
+  lockMode = false,
+  titleKey,
+  subtitleKey,
+}: {
+  module: WorkflowModuleConfig;
+  forcedMode?: CreateWorkflowMode;
+  lockMode?: boolean;
+  titleKey?: string;
+  subtitleKey?: string;
+}): React.ReactElement {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const meta = useMemo(() => getModuleMeta(module), [module]);
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [stockTab, setStockTab] = useState<'stocks' | 'selected'>('stocks');
-  const [mode, setMode] = useState<CreateWorkflowMode>(module.key === 'warehouse-outbound' ? 'free' : 'order');
+  const [mode, setMode] = useState<CreateWorkflowMode>(forcedMode ?? (module.key === 'warehouse-outbound' ? 'free' : 'order'));
   const [activeOrderNumber, setActiveOrderNumber] = useState<string | null>(null);
   const [barcodeInput, setBarcodeInput] = useState('');
   const [quantityInputs, setQuantityInputs] = useState<Record<string, string>>({});
@@ -386,6 +398,12 @@ export function WorkflowOrderCreateScreen({ module }: { module: WorkflowModuleCo
   const loadingBase = customersQuery.isLoading || projectsQuery.isLoading || warehousesQuery.isLoading || usersQuery.isLoading;
   const freeModeLabel = module.key === 'warehouse-outbound' ? t('workflowCreate.modeProcess') : t('workflowCreate.modeFree');
 
+  React.useEffect(() => {
+    if (forcedMode) {
+      setMode(forcedMode);
+    }
+  }, [forcedMode]);
+
   const handleBarcodeSearch = () => {
     if (!barcodeInput.trim()) {
       showWarning(t('workflowCreate.validation.enterBarcode'));
@@ -419,11 +437,11 @@ export function WorkflowOrderCreateScreen({ module }: { module: WorkflowModuleCo
       </Pressable>
 
       <View style={[styles.hero, { backgroundColor: theme.colors.card, borderColor: module.accent + '44' }]}>
-        <Text style={styles.heroTitle}>{t(module.createTitleKey)}</Text>
-        <Text style={[styles.heroSubtitle, { color: theme.colors.textSecondary }]}>{t('workflowCreate.subtitle')}</Text>
+        <Text style={styles.heroTitle}>{t(titleKey || module.createTitleKey)}</Text>
+        <Text style={[styles.heroSubtitle, { color: theme.colors.textSecondary }]}>{t(subtitleKey || 'workflowCreate.subtitle')}</Text>
       </View>
 
-      {meta.supportsFreeMode ? (
+      {meta.supportsFreeMode && !lockMode ? (
         <View style={styles.modeRow}>
           <Pressable style={[styles.modeChip, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceStrong }, mode === 'order' ? [styles.modeChipActive, { borderColor: theme.colors.primary }] : null]} onPress={() => toggleMode('order')}>
             <Text style={styles.modeText}>{t('workflowCreate.modeOrder')}</Text>

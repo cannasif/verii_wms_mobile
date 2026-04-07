@@ -276,6 +276,7 @@ export function WorkflowDetailScreen({
                         <Text style={styles.rowTitle}>{getOrderLineTitle(line)}</Text>
                         <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>{t('workflow.detailStockCode', { value: line.stockCode })}</Text>
                         <DetailMeta label={t('workflow.detailQuantity')} value={formatQuantity(line.quantity)} />
+                        <DetailMeta label={t('workflow.orderQuantity')} value={formatQuantity(line.siparisMiktar ?? line.quantity)} />
                         <DetailMeta label={t('workflow.detailUnit')} value={line.unit} />
                         <DetailMeta label={t('workflow.detailOrderReference')} value={firstFilled(line.erpOrderNo, line.erpOrderId)} />
                       </View>
@@ -293,6 +294,8 @@ export function WorkflowDetailScreen({
                               <DetailMeta label={t('workflow.detailSerialNo2')} value={serial.serialNo2} />
                               <DetailMeta label={t('workflow.detailSerialNo3')} value={serial.serialNo3} />
                               <DetailMeta label={t('workflow.detailSerialNo4')} value={serial.serialNo4} />
+                              <DetailMeta label={t('workflow.detailSourceWarehouse')} value={serial.sourceWarehouseName || serial.sourceWarehouseId?.toString()} />
+                              <DetailMeta label={t('workflow.detailTargetWarehouse')} value={serial.targetWarehouseName || serial.targetWarehouseId?.toString()} />
                               <DetailMeta label={t('workflow.detailSourceCell')} value={serial.sourceCellCode} />
                               <DetailMeta label={t('workflow.detailTargetCell')} value={serial.targetCellCode} />
                             </View>
@@ -343,8 +346,8 @@ export function WorkflowDetailScreen({
                             <DetailMeta label={t('workflow.detailSerialNo4')} value={route.serialNo4} />
                             <DetailMeta label={t('workflow.detailSourceCell')} value={route.sourceCellCode} />
                             <DetailMeta label={t('workflow.detailTargetCell')} value={route.targetCellCode} />
-                            <DetailMeta label={t('workflow.detailSourceWarehouse')} value={route.sourceWarehouse?.toString()} />
-                            <DetailMeta label={t('workflow.detailTargetWarehouse')} value={route.targetWarehouse?.toString()} />
+                            <DetailMeta label={t('workflow.detailSourceWarehouse')} value={route.sourceWarehouseName || route.sourceWarehouse?.toString()} />
+                            <DetailMeta label={t('workflow.detailTargetWarehouse')} value={route.targetWarehouseName || route.targetWarehouse?.toString()} />
                           </View>
                         )}
                       </View>

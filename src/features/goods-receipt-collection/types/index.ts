@@ -8,6 +8,7 @@ export interface AssignedGrLine {
   stockCode: string;
   stockName: string;
   yapKod: string | null;
+  yapAcik?: string | null;
   quantity: number;
   unit: string;
   erpOrderNo: string;
@@ -41,12 +42,11 @@ export interface StokBarcodeDto {
 
 export interface AddBarcodeRequest {
   headerId: number;
-  lineId: number;
   barcode: string;
-  stockCode: string;
-  stockName: string;
-  yapKod: string;
-  yapAcik: string;
+  stockCode?: string;
+  stockName?: string;
+  yapKod?: string;
+  yapAcik?: string;
   quantity: number;
   serialNo: string;
   serialNo2: string;
@@ -56,7 +56,10 @@ export interface AddBarcodeRequest {
   targetCellCode: string;
 }
 
-export interface GrImportRoute extends BaseWorkflowRouteDetail {}
+export interface GrImportRoute extends BaseWorkflowRouteDetail {
+  yapKod?: string | null;
+  yapAcik?: string | null;
+}
 
 export interface GrImportLine extends Pick<BaseWorkflowImportLineDetail, 'lineId'> {
   lineId: number;

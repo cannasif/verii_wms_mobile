@@ -5,6 +5,7 @@ export interface AppErrorShape {
   url?: string;
   method?: string;
   debugMessage?: string;
+  details?: unknown;
 }
 
 export class AppError extends Error {
@@ -13,8 +14,9 @@ export class AppError extends Error {
   url?: string;
   method?: string;
   debugMessage?: string;
+  details?: unknown;
 
-  constructor({ message, status, code, url, method, debugMessage }: AppErrorShape) {
+  constructor({ message, status, code, url, method, debugMessage, details }: AppErrorShape) {
     super(message);
     this.name = 'AppError';
     this.status = status;
@@ -22,6 +24,7 @@ export class AppError extends Error {
     this.url = url;
     this.method = method;
     this.debugMessage = debugMessage;
+    this.details = details;
   }
 }
 

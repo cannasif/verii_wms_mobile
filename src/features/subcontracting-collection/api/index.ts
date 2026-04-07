@@ -1,6 +1,7 @@
 import { apiClient } from '@/lib/axios';
 import type { ApiRequestOptions } from '@/lib/request-utils';
 import type { ApiResponse } from '@/types/paged';
+import { barcodeApi, toLegacyBarcodeStock } from '@/services/barcode-api';
 import type {
   CollectionApi,
   CollectionCollectedItem,
@@ -20,15 +21,10 @@ export function createSubcontractingCollectionApi(kind: 'issue' | 'receipt'): Co
       return response.data.data;
     },
 
-    async getStokBarcode(barcode: string, barcodeGroup: string = '1', options?: ApiRequestOptions): Promise<CollectionStockBarcode[]> {
-      const response = await apiClient.get<ApiResponse<CollectionStockBarcode[]>>('/api/Erp/getStokBarcode', {
-        params: { bar: barcode, barkodGrubu: barcodeGroup },
-        ...options,
-      });
-      if (!response.data.success || !response.data.data) {
-        throw new Error(response.data.message || 'Barkod bilgisi alınamadı.');
-      }
-      return response.data.data;
+    async getStokBarcode(barcode: string, options?: ApiRequestOptions): Promise<CollectionStockBarcode[]> {
+      const moduleKey = kind === 'issue' ? 'subcontracting-issue-assigned' : 'subcontracting-receipt-assigned';
+      const resolved = await barcodeApi.resolve(moduleKey, barcode, options);
+      return [toLegacyBarcodeStock(resolved)];
     },
 
     async addBarcodeToOrder(request) {
@@ -52,5 +48,11 @@ export function createSubcontractingCollectionApi(kind: 'issue' | 'receipt'): Co
         throw new Error(response.data.message || 'Fason tamamlama başarısız oldu.');
       }
     },
-  };
+  
+
+    async getBarcodeDefinition(options?: ApiRequestOptions) {
+      const moduleKey = kind === 'issue' ? 'subcontracting-issue-assigned' : 'subcontracting-receipt-assigned';
+      return await barcodeApi.getDefinition(moduleKey, options);
+    },
+};
 }

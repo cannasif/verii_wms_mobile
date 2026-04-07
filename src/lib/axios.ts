@@ -161,6 +161,7 @@ apiClient.interceptors.response.use(
         url: `${error.config?.baseURL || getApiBaseUrl()}${requestUrl}`,
         method: error.config?.method?.toUpperCase(),
         debugMessage,
+        details: error.response?.data,
       }),
     );
   }

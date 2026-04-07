@@ -80,6 +80,55 @@ export const workflowApi = {
     return response.data.data;
   },
 
+  async getApprovalHeaders(
+    moduleKey: WorkflowModuleKey,
+    params: PagedParams = {},
+    options?: ApiRequestOptions,
+  ): Promise<PagedResponse<WorkflowAssignedItem>> {
+    const module = getModuleOrThrow(moduleKey);
+
+    const requestBody = buildPagedRequest(params, {
+      pageNumber: 1,
+      pageSize: 20,
+      sortBy: 'Id',
+      sortDirection: 'desc',
+    });
+
+    const response = await apiClient.post<ApiResponse<PagedResponse<WorkflowAssignedItem>>>(
+      module.approvalListEndpoint,
+      requestBody,
+      options,
+    );
+
+    if (!response.data.success) {
+      throw new Error(response.data.message || i18n.t(module.approvalLoadFailedKey));
+    }
+
+    return response.data.data;
+  },
+
+  async approveHeader(
+    moduleKey: WorkflowModuleKey,
+    headerId: number,
+    approved: boolean,
+    options?: ApiRequestOptions,
+  ): Promise<void> {
+    const module = getModuleOrThrow(moduleKey);
+
+    const response = await apiClient.post<ApiResponse<unknown>>(
+      `${module.approvalActionEndpoint}/${headerId}`,
+      null,
+      {
+        ...options,
+        params: { approved, id: headerId },
+      },
+    );
+
+    if (!response.data.success) {
+      throw new Error(response.data.message || i18n.t(module.approvalLoadFailedKey));
+    }
+  },
+
   async getHeaderDetail(
     moduleKey: WorkflowModuleKey,
     headerId: number,

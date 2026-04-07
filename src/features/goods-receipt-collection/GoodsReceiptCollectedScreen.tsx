@@ -23,7 +23,9 @@ export function GoodsReceiptCollectedScreen({ headerId }: { headerId: number }):
         key: `${item.importLine.lineId}-${route.id}-${route.scannedBarcode || 'barcode'}-${index}`,
         barcode: route.scannedBarcode || '-',
         stockCode: route.stockCode || item.importLine.lineId?.toString() || '-',
-        stockName: route.description || '-',
+        stockName: route.stockName || '-',
+        yapKod: route.yapKod || '-',
+        yapAcik: route.yapAcik || '-',
         quantity: route.quantity,
         serialNo: route.serialNo || '-',
       })),
@@ -56,6 +58,11 @@ export function GoodsReceiptCollectedScreen({ headerId }: { headerId: number }):
               <Text style={styles.rowTitle}>{row.stockName}</Text>
               <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>{t('goodsReceiptCollection.barcodeValue', { value: row.barcode })}</Text>
               <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>{t('goodsReceiptCollection.collectedStockCode', { value: row.stockCode })}</Text>
+              {row.yapKod !== '-' ? (
+                <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>
+                  {t('workflow.yapKodLabel', { value: `${row.yapKod}${row.yapAcik !== '-' ? ` - ${row.yapAcik}` : ''}` })}
+                </Text>
+              ) : null}
               <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>{t('goodsReceiptCollection.lineCollected', { value: row.quantity, unit: '' })}</Text>
               <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>{t('goodsReceiptCollection.collectedSerialNo', { value: row.serialNo })}</Text>
             </View>

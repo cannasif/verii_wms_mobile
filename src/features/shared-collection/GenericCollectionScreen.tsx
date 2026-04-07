@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
@@ -13,6 +13,9 @@ import { showError, showMessage, showWarning } from '@/lib/feedback';
 import { useTheme } from '@/providers/ThemeProvider';
 import { CollectionHeaderInfoCard } from './CollectionHeaderInfoCard';
 import type { CollectionApi, CollectionHeaderInfo, CollectionLine, CollectionStockBarcode } from './types';
+import type { BarcodeMatchCandidate } from '@/services/barcode-types';
+import { BarcodeCandidatePicker } from '@/features/shared-collection/components/BarcodeCandidatePicker';
+import { extractBarcodeFeedback } from '@/features/shared-collection/barcode-feedback';
 
 function parseDecimalInput(value: string): number {
   const normalized = value.replace(',', '.').trim();
@@ -88,6 +91,9 @@ export function GenericCollectionScreen({
   const [searchedBarcode, setSearchedBarcode] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [selectedBarcodeOverride, setSelectedBarcodeOverride] = useState<CollectionStockBarcode | null>(null);
+  const [ambiguousCandidates, setAmbiguousCandidates] = useState<BarcodeMatchCandidate[]>([]);
+  const [barcodeErrorMessage, setBarcodeErrorMessage] = useState<string | null>(null);
 
   const orderLinesQuery = useQuery({
     queryKey: [modulePath, 'collection', 'lines', headerId],
@@ -103,20 +109,26 @@ export function GenericCollectionScreen({
 
   const barcodeQuery = useQuery({
     queryKey: [modulePath, 'collection', 'barcode', searchedBarcode],
-    queryFn: ({ signal }) => api.getStokBarcode(searchedBarcode, '1', { signal }),
+    queryFn: ({ signal }) => api.getStokBarcode(searchedBarcode, { signal }),
     enabled: searchedBarcode.trim().length > 0,
   });
 
+
+  const barcodeDefinitionQuery = useQuery({
+    queryKey: [modulePath, 'collection', 'barcode-definition'],
+    queryFn: ({ signal }) => api.getBarcodeDefinition ? api.getBarcodeDefinition({ signal }) : Promise.resolve(null),
+    enabled: Boolean(api.getBarcodeDefinition),
+  });
+
   const addBarcodeMutation = useMutation({
-    mutationFn: (payload: { lineId: number; stock: CollectionStockBarcode; quantity: number }) =>
+    mutationFn: (payload: { stock: CollectionStockBarcode; quantity: number }) =>
       api.addBarcodeToOrder({
         headerId,
-        lineId: payload.lineId,
         barcode: payload.stock.barkod,
         stockCode: payload.stock.stokKodu,
         stockName: payload.stock.stokAdi,
-        yapKod: payload.stock.yapKod || '',
-        yapAcik: payload.stock.yapAcik || '',
+        yapKod: payload.stock.yapKod ?? undefined,
+        yapAcik: payload.stock.yapAcik ?? undefined,
         quantity: payload.quantity,
         serialNo: '',
         serialNo2: '',
@@ -135,7 +147,11 @@ export function GenericCollectionScreen({
       setQuantity('1');
       showMessage(t(collectSuccessTitleKey), t(collectSuccessTextKey));
     },
-    onError: (error: Error) => showError(error, normalizeError(error, t('common.error')).message),
+    onError: (error: Error) => {
+      const normalized = normalizeError(error, t('common.error'));
+      const feedback = extractBarcodeFeedback(normalized);
+      showError(error, feedback.message);
+    },
   });
 
   const completeMutation = useMutation({
@@ -143,10 +159,31 @@ export function GenericCollectionScreen({
     onSuccess: () => {
       setShowCompleteDialog(true);
     },
-    onError: (error: Error) => showError(error, normalizeError(error, t('common.error')).message),
+    onError: (error: Error) => {
+      const normalized = normalizeError(error, t('common.error'));
+      const feedback = extractBarcodeFeedback(normalized);
+      showError(error, feedback.message);
+    },
   });
 
-  const selectedBarcode = barcodeQuery.data?.[0] ?? null;
+  const selectedBarcode = selectedBarcodeOverride ?? barcodeQuery.data?.[0] ?? null;
+
+  useEffect(() => {
+    if (!barcodeQuery.isError) {
+      return;
+    }
+
+    const normalized = normalizeError(barcodeQuery.error, t('common.error'));
+    const feedback = extractBarcodeFeedback(normalized);
+
+    setBarcodeErrorMessage(feedback.message);
+    if (feedback.candidates.length > 0) {
+      setAmbiguousCandidates(feedback.candidates);
+      return;
+    }
+
+    showError(barcodeQuery.error, feedback.message);
+  }, [barcodeQuery.error, barcodeQuery.isError, showError, t]);
 
   const orderLinesWithCollected = useMemo(() => {
     const lines = orderLinesQuery.data?.lines ?? [];
@@ -175,6 +212,9 @@ export function GenericCollectionScreen({
       return;
     }
     setSearchedBarcode(barcodeInput.trim());
+    setSelectedBarcodeOverride(null);
+    setAmbiguousCandidates([]);
+    setBarcodeErrorMessage(null);
   };
 
   const handleCollect = (): void => {
@@ -189,14 +229,15 @@ export function GenericCollectionScreen({
       return;
     }
 
-    const matchingLine = orderLinesWithCollected.find((line) => line.stockCode === selectedBarcode.stokKodu);
-    if (!matchingLine) {
+    const stockExistsInOrder = orderLinesWithCollected.some(
+      (line) => line.stockCode === selectedBarcode.stokKodu && ((line as { yapKod?: string | null }).yapKod ?? '') === (selectedBarcode.yapKod ?? ''),
+    );
+    if (!stockExistsInOrder) {
       showWarning(t(stockNotInOrderKey));
       return;
     }
 
     addBarcodeMutation.mutate({
-      lineId: matchingLine.id,
       stock: selectedBarcode,
       quantity: collectQuantity,
     });
@@ -231,12 +272,44 @@ export function GenericCollectionScreen({
           placeholder={t(barcodePlaceholderKey)}
           placeholderTextColor={theme.colors.inputPlaceholder}
         />
+        {barcodeDefinitionQuery.data?.hintText ? (
+          <Text style={[styles.stockMeta, { color: theme.colors.textSecondary }]}>
+            {t('common.barcodeFormat', { format: barcodeDefinitionQuery.data.hintText })}
+          </Text>
+        ) : null}
+
         <Button title={barcodeQuery.isFetching ? t('common.loading') : t('paged.search')} onPress={handleSearch} loading={barcodeQuery.isFetching} />
+
+        {ambiguousCandidates.length > 0 ? (
+          <BarcodeCandidatePicker
+            candidates={ambiguousCandidates}
+            message={barcodeErrorMessage || t('common.warning')}
+            onSelect={(candidate) => {
+              setSelectedBarcodeOverride({
+                barkod: barcodeInput.trim() || searchedBarcode.trim(),
+                stokKodu: candidate.stockCode ?? '',
+                stokAdi: candidate.stockName ?? '',
+                olcuAdi: '',
+                yapKod: candidate.yapKod ?? null,
+                yapAcik: candidate.yapAcik ?? null,
+              });
+              setAmbiguousCandidates([]);
+              setBarcodeErrorMessage(null);
+            }}
+          />
+        ) : null}
 
         {selectedBarcode ? (
           <View style={[styles.stockCard, { borderColor: theme.colors.primary }]}>
             <Text style={[styles.stockCode, { color: theme.colors.primary }]}>{selectedBarcode.stokKodu}</Text>
             <Text style={styles.stockName}>{selectedBarcode.stokAdi}</Text>
+            {(selectedBarcode.yapKod || selectedBarcode.yapAcik) ? (
+              <Text style={[styles.stockMeta, { color: theme.colors.textSecondary }]}>
+                {t('workflow.yapKodLabel', {
+                  value: `${selectedBarcode.yapKod || '-'}${selectedBarcode.yapAcik ? ` - ${selectedBarcode.yapAcik}` : ''}`,
+                })}
+              </Text>
+            ) : null}
             <Text style={[styles.stockMeta, { color: theme.colors.textSecondary }]}>{t(barcodeValueKey, { value: selectedBarcode.barkod })}</Text>
             <TextInput
               value={quantity}
@@ -337,6 +410,11 @@ function LineStatusCard({
     <View style={[styles.lineCard, { backgroundColor: theme.colors.backgroundSecondary, borderColor: theme.colors.border }]}>
       <Text style={styles.lineTitle}>{line.stockName}</Text>
       <Text style={[styles.lineMeta, { color: theme.colors.textSecondary }]}>{line.stockCode}</Text>
+      {line.yapKod ? (
+        <Text style={[styles.lineMeta, { color: theme.colors.textSecondary }]}>
+          {t('workflow.yapKodLabel', { value: `${line.yapKod}${line.yapAcik ? ` - ${line.yapAcik}` : ''}` })}
+        </Text>
+      ) : null}
       <Text style={[styles.lineMeta, { color: theme.colors.textSecondary }]}>{t(totalKey, { value: line.quantity, unit: line.unit })}</Text>
       <Text style={[styles.lineMeta, { color: theme.colors.textSecondary }]}>{t(collectedKey, { value: line.collectedQuantity, unit: line.unit })}</Text>
       <Text style={[styles.lineMeta, { color: theme.colors.textSecondary }]}>{t(remainingKey, { value: line.remainingQuantity, unit: line.unit })}</Text>

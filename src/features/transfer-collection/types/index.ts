@@ -5,10 +5,10 @@ import type {
 
 export interface AssignedTransferLine {
   id: number;
-  stockCode: string;
-  stockName: string;
-  yapKod: string;
-  yapAcik: string;
+  stockCode?: string;
+  stockName?: string;
+  yapKod?: string;
+  yapAcik?: string;
   quantity: number;
   unit: string;
   erpOrderNo: string;
@@ -34,12 +34,11 @@ export interface StokBarcodeDto {
 
 export interface AddBarcodeRequest {
   headerId: number;
-  lineId: number;
   barcode: string;
-  stockCode: string;
-  stockName: string;
-  yapKod: string;
-  yapAcik: string;
+  stockCode?: string;
+  stockName?: string;
+  yapKod?: string;
+  yapAcik?: string;
   quantity: number;
   serialNo: string;
   serialNo2: string;

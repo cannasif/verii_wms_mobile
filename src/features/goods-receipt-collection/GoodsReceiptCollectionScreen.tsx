@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -13,11 +13,15 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/constants/theme';
+import { normalizeError } from '@/lib/errors';
 import { showError, showMessage, showWarning } from '@/lib/feedback';
 import { useTheme } from '@/providers/ThemeProvider';
 import { goodsReceiptCollectionApi } from './api';
 import { CollectionHeaderInfoCard } from '@/features/shared-collection/CollectionHeaderInfoCard';
 import type { AssignedGrLine, StokBarcodeDto } from './types';
+import type { BarcodeMatchCandidate } from '@/services/barcode-types';
+import { BarcodeCandidatePicker } from '@/features/shared-collection/components/BarcodeCandidatePicker';
+import { extractBarcodeFeedback } from '@/features/shared-collection/barcode-feedback';
 import type { CollectionHeaderInfo } from '@/features/shared-collection/types';
 
 function parseDecimalInput(value: string): number {
@@ -44,6 +48,8 @@ export function GoodsReceiptCollectionScreen({
   const [searchedBarcode, setSearchedBarcode] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [selectedStock, setSelectedStock] = useState<StokBarcodeDto | null>(null);
+  const [ambiguousCandidates, setAmbiguousCandidates] = useState<BarcodeMatchCandidate[]>([]);
+  const [barcodeErrorMessage, setBarcodeErrorMessage] = useState<string | null>(null);
 
   const orderLinesQuery = useQuery({
     queryKey: ['goods-receipt-collection', 'lines', headerId],
@@ -59,24 +65,28 @@ export function GoodsReceiptCollectionScreen({
 
   const barcodeQuery = useQuery({
     queryKey: ['goods-receipt-collection', 'barcode', searchedBarcode],
-    queryFn: () => goodsReceiptCollectionApi.getStokBarcode(searchedBarcode, '1'),
+    queryFn: () => goodsReceiptCollectionApi.getStokBarcode(searchedBarcode),
     enabled: searchedBarcode.trim().length > 0,
+  });
+
+  const barcodeDefinitionQuery = useQuery({
+    queryKey: ['goods-receipt-collection', 'barcode-definition'],
+    queryFn: () => goodsReceiptCollectionApi.getBarcodeDefinition?.(),
+    enabled: Boolean(goodsReceiptCollectionApi.getBarcodeDefinition),
   });
 
   const addBarcodeMutation = useMutation({
     mutationFn: (payload: {
-      lineId: number;
       stock: StokBarcodeDto;
       quantity: number;
     }) =>
       goodsReceiptCollectionApi.addBarcodeToOrder({
         headerId,
-        lineId: payload.lineId,
         barcode: payload.stock.barkod,
         stockCode: payload.stock.stokKodu,
         stockName: payload.stock.stokAdi,
-        yapKod: payload.stock.yapKod || '',
-        yapAcik: payload.stock.yapAcik || '',
+        yapKod: payload.stock.yapKod ?? undefined,
+        yapAcik: payload.stock.yapAcik ?? undefined,
         quantity: payload.quantity,
         serialNo: '',
         serialNo2: '',
@@ -97,7 +107,9 @@ export function GoodsReceiptCollectionScreen({
       showMessage(t('goodsReceiptCollection.collectSuccessTitle'), t('goodsReceiptCollection.collectSuccessText'));
     },
     onError: (error: Error) => {
-      showError(error, t('common.error'));
+      const normalized = normalizeError(error, t('common.error'));
+      const feedback = extractBarcodeFeedback(normalized);
+      showError(error, feedback.message);
     },
   });
 
@@ -112,13 +124,32 @@ export function GoodsReceiptCollectionScreen({
       ]);
     },
     onError: (error: Error) => {
-      showError(error, t('common.error'));
+      const normalized = normalizeError(error, t('common.error'));
+      const feedback = extractBarcodeFeedback(normalized);
+      showError(error, feedback.message);
     },
   });
 
   const selectedBarcode = useMemo(() => {
-    return barcodeQuery.data?.[0] ?? null;
-  }, [barcodeQuery.data]);
+    return selectedStock ?? barcodeQuery.data?.[0] ?? null;
+  }, [barcodeQuery.data, selectedStock]);
+
+  useEffect(() => {
+    if (!barcodeQuery.isError) {
+      return;
+    }
+
+    const normalized = normalizeError(barcodeQuery.error, t('common.error'));
+    const feedback = extractBarcodeFeedback(normalized);
+
+    setBarcodeErrorMessage(feedback.message);
+    if (feedback.candidates.length > 0) {
+      setAmbiguousCandidates(feedback.candidates);
+      return;
+    }
+
+    showError(barcodeQuery.error, feedback.message);
+  }, [barcodeQuery.error, barcodeQuery.isError, t]);
 
   const orderLinesWithCollected = useMemo(() => {
     const lines = orderLinesQuery.data?.lines ?? [];
@@ -151,6 +182,9 @@ export function GoodsReceiptCollectionScreen({
       return;
     }
     setSearchedBarcode(barcodeInput.trim());
+    setSelectedStock(null);
+    setAmbiguousCandidates([]);
+    setBarcodeErrorMessage(null);
   };
 
   const handleCollect = (): void => {
@@ -167,15 +201,16 @@ export function GoodsReceiptCollectionScreen({
       return;
     }
 
-    const matchingLine = orderLinesWithCollected.find((line) => line.stockCode === stock.stokKodu);
-    if (!matchingLine) {
+    const stockExistsInOrder = orderLinesWithCollected.some(
+      (line) => line.stockCode === stock.stokKodu && ((line.yapKod ?? '') === (stock.yapKod ?? '')),
+    );
+    if (!stockExistsInOrder) {
       showWarning(t('goodsReceiptCollection.stockNotInOrder'));
       return;
     }
 
     setSelectedStock(stock);
     addBarcodeMutation.mutate({
-      lineId: matchingLine.id,
       stock,
       quantity: collectQuantity,
     });
@@ -215,6 +250,40 @@ export function GoodsReceiptCollectionScreen({
           placeholderTextColor={theme.colors.inputPlaceholder}
           autoCapitalize='characters'
         />
+
+        {ambiguousCandidates.length > 0 ? (
+          <BarcodeCandidatePicker
+            candidates={ambiguousCandidates}
+            message={barcodeErrorMessage || t('common.warning')}
+            onSelect={(candidate) => {
+              setSelectedStock({
+                barkod: barcodeInput.trim() || searchedBarcode.trim(),
+                stokKodu: candidate.stockCode ?? '',
+                stokAdi: candidate.stockName ?? '',
+                depoKodu: null,
+                depoAdi: null,
+                rafKodu: null,
+                yapilandir: '',
+                olcuBr: 0,
+                olcuAdi: '',
+                yapKod: candidate.yapKod ?? null,
+                yapAcik: candidate.yapAcik ?? null,
+                cevrim: 0,
+                seriBarkodMu: Boolean(candidate.serialNumber),
+                sktVarmi: null,
+                isemriNo: null,
+              });
+              setAmbiguousCandidates([]);
+              setBarcodeErrorMessage(null);
+            }}
+          />
+        ) : null}
+
+        {barcodeDefinitionQuery.data?.hintText ? (
+          <Text style={[styles.stockMeta, { color: theme.colors.textSecondary }]}>
+            {t('common.barcodeFormat', { format: barcodeDefinitionQuery.data.hintText })}
+          </Text>
+        ) : null}
 
         <Button title={barcodeQuery.isFetching ? t('common.loading') : t('paged.search')} onPress={handleSearch} loading={barcodeQuery.isFetching} />
 

@@ -1,6 +1,7 @@
 import { apiClient } from '@/lib/axios';
 import type { ApiRequestOptions } from '@/lib/request-utils';
 import type { ApiResponse } from '@/types/paged';
+import { barcodeApi, toLegacyBarcodeStock } from '@/services/barcode-api';
 import type {
   AddBarcodeRequest,
   AssignedGrOrderLinesData,
@@ -17,15 +18,9 @@ export const goodsReceiptCollectionApi = {
     return response.data.data;
   },
 
-  async getStokBarcode(barcode: string, barcodeGroup: string = '1', options?: ApiRequestOptions): Promise<StokBarcodeDto[]> {
-    const response = await apiClient.get<ApiResponse<StokBarcodeDto[]>>('/api/Erp/getStokBarcode', {
-      params: { bar: barcode, barkodGrubu: barcodeGroup },
-      ...options,
-    });
-    if (!response.data.success || !response.data.data) {
-      throw new Error(response.data.message || 'Barkod bilgisi alınamadı.');
-    }
-    return response.data.data;
+  async getStokBarcode(barcode: string, options?: ApiRequestOptions): Promise<StokBarcodeDto[]> {
+    const resolved = await barcodeApi.resolve('goods-receipt-assigned', barcode, options);
+    return [toLegacyBarcodeStock(resolved)];
   },
 
   async addBarcodeToOrder(request: AddBarcodeRequest): Promise<void> {
@@ -48,5 +43,10 @@ export const goodsReceiptCollectionApi = {
     if (!response.data.success) {
       throw new Error(response.data.message || 'Mal kabul tamamlama başarısız oldu.');
     }
+  },
+
+
+  async getBarcodeDefinition(options?: ApiRequestOptions) {
+    return await barcodeApi.getDefinition('goods-receipt-assigned', options);
   },
 };

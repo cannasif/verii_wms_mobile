@@ -1,5 +1,6 @@
 import i18next from 'i18next';
 import { apiClient } from '@/lib/axios';
+import { barcodeApi } from '@/services/barcode-api';
 import type { ApiRequestOptions } from '@/lib/request-utils';
 import { buildPagedRequest } from '@/lib/paged';
 import type { ApiResponse, PagedResponse } from '@/types/paged';
@@ -48,7 +49,6 @@ async function getErpPagedData<T>(url: string, fallbackKey: string, options?: Ap
 function buildTransferRequest(
   formData: WorkflowCreateFormValues,
   selectedItems: SelectedWorkflowItem[],
-  isFreeTransfer: boolean,
 ) {
   const now = new Date().toISOString();
   const lines: Array<Record<string, unknown>> = [];
@@ -67,6 +67,7 @@ function buildTransferRequest(
       yapKod: '',
       orderId: 0,
       quantity: item.transferQuantity,
+      siparisMiktar: 'orderedQty' in item ? item.orderedQty || item.transferQuantity : undefined,
       unit: 'unit' in item ? item.unit || '' : '',
       erpOrderNo: '',
       erpOrderId: '',
@@ -80,16 +81,14 @@ function buildTransferRequest(
       serialNo2: item.serialNo2 || '',
       serialNo3: item.lotNo || '',
       serialNo4: item.batchNo || '',
+      sourceWarehouseId: undefined,
+      targetWarehouseId: formData.targetWarehouseRefId,
       sourceCellCode: item.sourceCellCode || '',
       targetCellCode: item.targetCellCode || '',
       lineClientKey: clientKey,
       lineGroupGuid: clientGuid,
     });
   });
-
-  const firstItemSourceWarehouse = selectedItems.length > 0 && 'sourceWarehouse' in selectedItems[0]
-    ? selectedItems[0].sourceWarehouse
-    : undefined;
 
   return {
     header: {
@@ -107,20 +106,72 @@ function buildTransferRequest(
       completedDate: now,
       documentNo: formData.documentNo,
       documentDate: formData.transferDate,
-      customerId: isFreeTransfer ? undefined : formData.customerRefId,
-      customerCode: isFreeTransfer ? '' : (formData.customerId || ''),
+      customerId: formData.customerRefId,
+      customerCode: formData.customerId || '',
       customerName: '',
-      sourceWarehouseId: isFreeTransfer ? formData.sourceWarehouseRefId : undefined,
-      sourceWarehouse: isFreeTransfer ? (formData.sourceWarehouse || '') : (firstItemSourceWarehouse ? String(firstItemSourceWarehouse) : ''),
+      sourceWarehouseId: undefined,
+      sourceWarehouse: '',
       targetWarehouseId: formData.targetWarehouseRefId,
       targetWarehouse: formData.targetWarehouse,
       priority: '',
-      type: isFreeTransfer ? 1 : 0,
+      type: 0,
     },
     lines,
     lineSerials,
     terminalLines: formData.userIds.map((userId) => ({ terminalUserId: userId })),
     userIds: formData.userIds.length > 0 ? formData.userIds : undefined,
+  };
+}
+
+function buildTransferProcessRequest(
+  formData: WorkflowCreateFormValues,
+  selectedItems: SelectedWorkflowItem[],
+) {
+  const now = new Date().toISOString();
+  const positiveItems = selectedItems.filter((item) => Number.isFinite(item.transferQuantity) && item.transferQuantity > 0);
+
+  return {
+    header: {
+      branchCode: getActiveBranchCode(),
+      projectCode: formData.projectCode || '',
+      orderId: '',
+      documentType: 'WT',
+      yearCode: new Date().getFullYear().toString(),
+      description1: formData.notes || '',
+      description2: '',
+      priorityLevel: 0,
+      plannedDate: formData.transferDate,
+      isPlanned: true,
+      isCompleted: false,
+      completedDate: now,
+      documentNo: formData.documentNo,
+      documentDate: formData.transferDate,
+      customerId: undefined,
+      customerCode: '',
+      customerName: '',
+      sourceWarehouseId: formData.sourceWarehouseRefId,
+      sourceWarehouse: formData.sourceWarehouse || '',
+      targetWarehouseId: formData.targetWarehouseRefId,
+      targetWarehouse: formData.targetWarehouse || '',
+      priority: '',
+      type: 1,
+    },
+    routes: positiveItems.map((item) => ({
+      stockId: item.stockId,
+      stockCode: item.stockCode,
+      yapKodId: 'yapKodId' in item ? item.yapKodId : undefined,
+      yapKod: 'yapKod' in item ? item.yapKod || item.configCode || '' : item.configCode || '',
+      quantity: item.transferQuantity,
+      serialNo: item.serialNo || '',
+      serialNo2: item.serialNo2 || '',
+      serialNo3: item.lotNo || '',
+      serialNo4: item.batchNo || '',
+      scannedBarcode: 'scannedBarcode' in item ? item.scannedBarcode || item.stockCode : item.stockCode,
+      sourceWarehouse: formData.sourceWarehouse ? Number(formData.sourceWarehouse) : undefined,
+      targetWarehouse: formData.targetWarehouse ? Number(formData.targetWarehouse) : undefined,
+      sourceCellCode: item.sourceCellCode || '',
+      targetCellCode: item.targetCellCode || '',
+    })),
   };
 }
 
@@ -144,6 +195,7 @@ function buildShipmentRequest(formData: WorkflowCreateFormValues, selectedItems:
       yapAcik: 'yapAcik' in item ? item.yapAcik || '' : '',
       orderId: 'orderID' in item ? item.orderID || 0 : 0,
       quantity: item.transferQuantity,
+      siparisMiktar: 'orderedQty' in item ? item.orderedQty || item.transferQuantity : undefined,
       unit: 'unit' in item ? item.unit || '' : '',
       erpOrderNo: 'siparisNo' in item ? item.siparisNo || '' : '',
       erpOrderId: 'orderID' in item ? String(item.orderID || '') : '',
@@ -157,6 +209,8 @@ function buildShipmentRequest(formData: WorkflowCreateFormValues, selectedItems:
       serialNo2: item.serialNo2 || '',
       serialNo3: item.lotNo || '',
       serialNo4: item.batchNo || '',
+      sourceWarehouseId: formData.sourceWarehouseRefId,
+      targetWarehouseId: undefined,
       sourceCellCode: item.sourceCellCode || '',
       targetCellCode: item.targetCellCode || '',
       lineClientKey: clientKey,
@@ -196,6 +250,54 @@ function buildShipmentRequest(formData: WorkflowCreateFormValues, selectedItems:
   };
 }
 
+function buildShipmentProcessRequest(formData: WorkflowCreateFormValues, selectedItems: SelectedWorkflowItem[]) {
+  const now = new Date().toISOString();
+  const positiveItems = selectedItems.filter((item) => Number.isFinite(item.transferQuantity) && item.transferQuantity > 0);
+
+  return {
+    header: {
+      branchCode: getActiveBranchCode(),
+      projectCode: formData.projectCode || '',
+      orderId: '',
+      documentType: 'SH',
+      yearCode: new Date().getFullYear().toString(),
+      description1: formData.notes || '',
+      description2: '',
+      priorityLevel: 0,
+      plannedDate: formData.transferDate,
+      isPlanned: true,
+      isCompleted: false,
+      completedDate: now,
+      documentNo: formData.documentNo,
+      documentDate: formData.transferDate,
+      customerId: formData.customerRefId,
+      customerCode: formData.customerId || '',
+      customerName: '',
+      sourceWarehouseId: formData.sourceWarehouseRefId,
+      sourceWarehouse: formData.sourceWarehouse || '',
+      targetWarehouse: '',
+      priority: '',
+      type: 1,
+    },
+    routes: positiveItems.map((item) => ({
+      stockId: item.stockId,
+      stockCode: item.stockCode,
+      yapKodId: 'yapKodId' in item ? item.yapKodId : undefined,
+      yapKod: 'yapKod' in item ? item.yapKod || item.configCode || '' : item.configCode || '',
+      quantity: item.transferQuantity,
+      serialNo: item.serialNo || '',
+      serialNo2: item.serialNo2 || '',
+      serialNo3: item.lotNo || '',
+      serialNo4: item.batchNo || '',
+      scannedBarcode: 'scannedBarcode' in item ? item.scannedBarcode || item.stockCode : item.stockCode,
+      sourceWarehouse: formData.sourceWarehouse ? Number(formData.sourceWarehouse) : undefined,
+      targetWarehouse: undefined,
+      sourceCellCode: item.sourceCellCode || '',
+      targetCellCode: item.targetCellCode || '',
+    })),
+  };
+}
+
 function buildWarehouseRequest(
   formData: WorkflowCreateFormValues,
   selectedItems: SelectedWorkflowItem[],
@@ -220,6 +322,7 @@ function buildWarehouseRequest(
       yapAcik: 'yapAcik' in item ? item.yapAcik || '' : '',
       orderId: 'orderID' in item ? item.orderID || 0 : 0,
       quantity: item.transferQuantity,
+      siparisMiktar: 'orderedQty' in item ? item.orderedQty || item.transferQuantity : undefined,
       unit: 'unit' in item ? item.unit || '' : '',
       erpOrderNo: 'siparisNo' in item ? item.siparisNo || '' : '',
       erpOrderId: 'orderID' in item ? String(item.orderID || '') : '',
@@ -233,6 +336,8 @@ function buildWarehouseRequest(
       serialNo2: item.serialNo2 || '',
       serialNo3: item.lotNo || '',
       serialNo4: item.batchNo || '',
+      sourceWarehouseId: direction === 'outbound' ? formData.sourceWarehouseRefId : undefined,
+      targetWarehouseId: direction === 'inbound' ? formData.targetWarehouseRefId : undefined,
       sourceCellCode: item.sourceCellCode || '',
       targetCellCode: item.targetCellCode || '',
       lineClientKey: clientKey,
@@ -282,57 +387,16 @@ function buildWarehouseOutboundProcessRequest(
   const now = new Date().toISOString();
   const positiveItems = selectedItems.filter((item) => Number.isFinite(item.transferQuantity) && item.transferQuantity > 0);
   const sourceWarehouse = formData.sourceWarehouse ? Number(formData.sourceWarehouse) : undefined;
-  const lines: Array<Record<string, unknown>> = [];
-  const importLines: Array<Record<string, unknown>> = [];
   const routes: Array<Record<string, unknown>> = [];
-  const importLineGroups = new Map<string, { clientKey: string; clientGroupGuid: string }>();
 
   positiveItems.forEach((item) => {
-    const lineClientKey = randomGuid();
-    const lineGroupGuid = randomGuid();
     const yapKod = 'yapKod' in item ? item.yapKod || '' : '';
-    const importGroupingKey = `${item.stockCode}__${yapKod}`;
-    let importLineGroup = importLineGroups.get(importGroupingKey);
-    if (!importLineGroup) {
-      importLineGroup = {
-        clientKey: randomGuid(),
-        clientGroupGuid: randomGuid(),
-      };
-      importLineGroups.set(importGroupingKey, importLineGroup);
-      importLines.push({
-        clientKey: importLineGroup.clientKey,
-        clientGroupGuid: importLineGroup.clientGroupGuid,
-        stockId: item.stockId,
-        stockCode: item.stockCode,
-        yapKodId: 'yapKodId' in item ? item.yapKodId : undefined,
-        yapKod,
-        quantity: item.transferQuantity,
-        unit: 'unit' in item ? item.unit || '' : '',
-        erpOrderNumber: '',
-        erpOrderNo: '',
-        erpOrderLineNumber: '',
-      });
-    }
-
-    lines.push({
-      clientKey: lineClientKey,
-      clientGuid: lineGroupGuid,
-      stockId: item.stockId,
-      stockCode: item.stockCode,
-      yapKodId: 'yapKodId' in item ? item.yapKodId : undefined,
-      yapKod,
-      quantity: item.transferQuantity,
-      unit: 'unit' in item ? item.unit || '' : '',
-      erpOrderNo: '',
-      erpOrderId: '',
-      description: 'stockName' in item ? item.stockName || '' : '',
-    });
 
     routes.push({
-      importLineClientKey: importLineGroup.clientKey,
-      importLineGroupGuid: importLineGroup.clientGroupGuid,
       stockCode: item.stockCode,
+      stockId: item.stockId,
       yapKod,
+      yapKodId: 'yapKodId' in item ? item.yapKodId : undefined,
       quantity: item.transferQuantity,
       serialNo: item.serialNo || '',
       serialNo2: item.serialNo2 || '',
@@ -371,9 +435,59 @@ function buildWarehouseOutboundProcessRequest(
       outboundType: formData.operationType || '',
       type: 0,
     },
-    lines,
-    importLines,
     routes,
+  };
+}
+
+function buildWarehouseInboundProcessRequest(
+  formData: WorkflowCreateFormValues,
+  selectedItems: SelectedWorkflowItem[],
+) {
+  const now = new Date().toISOString();
+  const positiveItems = selectedItems.filter((item) => Number.isFinite(item.transferQuantity) && item.transferQuantity > 0);
+
+  return {
+    header: {
+      branchCode: getActiveBranchCode(),
+      projectCode: formData.projectCode || '',
+      orderId: '',
+      documentType: 'WI',
+      yearCode: new Date().getFullYear().toString(),
+      description1: formData.notes || '',
+      description2: '',
+      priorityLevel: 0,
+      plannedDate: formData.transferDate,
+      isPlanned: true,
+      isCompleted: false,
+      completedDate: now,
+      documentNo: formData.documentNo,
+      documentDate: formData.transferDate,
+      customerId: formData.customerRefId,
+      customerCode: formData.customerId || '',
+      customerName: '',
+      sourceWarehouseId: undefined,
+      sourceWarehouse: '',
+      targetWarehouseId: formData.targetWarehouseRefId,
+      targetWarehouse: formData.targetWarehouse || '',
+      outboundType: formData.operationType || '',
+      type: 1,
+    },
+    routes: positiveItems.map((item) => ({
+      stockId: item.stockId,
+      stockCode: item.stockCode,
+      yapKodId: 'yapKodId' in item ? item.yapKodId : undefined,
+      yapKod: 'yapKod' in item ? item.yapKod || item.configCode || '' : item.configCode || '',
+      quantity: item.transferQuantity,
+      serialNo: item.serialNo || '',
+      serialNo2: item.serialNo2 || '',
+      serialNo3: item.lotNo || '',
+      serialNo4: item.batchNo || '',
+      scannedBarcode: 'scannedBarcode' in item ? item.scannedBarcode || item.stockCode : item.stockCode,
+      sourceWarehouse: undefined,
+      targetWarehouse: formData.targetWarehouse ? Number(formData.targetWarehouse) : undefined,
+      sourceCellCode: item.sourceCellCode || '',
+      targetCellCode: item.targetCellCode || '',
+    })),
   };
 }
 
@@ -401,6 +515,7 @@ function buildSubcontractingRequest(
       yapAcik: 'yapAcik' in item ? item.yapAcik || '' : '',
       orderId: 'orderID' in item ? item.orderID || 0 : 0,
       quantity: item.transferQuantity,
+      siparisMiktar: 'orderedQty' in item ? item.orderedQty || item.transferQuantity : undefined,
       unit: 'unit' in item ? item.unit || '' : '',
       erpOrderNo: 'siparisNo' in item ? item.siparisNo || '' : '',
       erpOrderId: 'orderID' in item ? String(item.orderID || '') : '',
@@ -454,6 +569,59 @@ function buildSubcontractingRequest(
   };
 }
 
+function buildSubcontractingProcessRequest(
+  formData: WorkflowCreateFormValues,
+  selectedItems: SelectedWorkflowItem[],
+  type: 'issue' | 'receipt',
+) {
+  const now = new Date().toISOString();
+  const positiveItems = selectedItems.filter((item) => Number.isFinite(item.transferQuantity) && item.transferQuantity > 0);
+
+  return {
+    header: {
+      branchCode: getActiveBranchCode(),
+      projectCode: formData.projectCode || '',
+      orderId: '',
+      documentType: type === 'issue' ? 'SIT' : 'SRT',
+      yearCode: new Date().getFullYear().toString(),
+      description1: formData.notes || '',
+      description2: '',
+      priorityLevel: 0,
+      plannedDate: formData.transferDate,
+      isPlanned: true,
+      isCompleted: false,
+      completedDate: now,
+      documentNo: formData.documentNo,
+      documentDate: formData.transferDate,
+      customerId: formData.customerRefId,
+      customerCode: formData.customerId || '',
+      customerName: '',
+      sourceWarehouseId: formData.sourceWarehouseRefId,
+      sourceWarehouse: formData.sourceWarehouse || '',
+      targetWarehouseId: formData.targetWarehouseRefId,
+      targetWarehouse: formData.targetWarehouse || '',
+      priority: '',
+      type: 1,
+    },
+    routes: positiveItems.map((item) => ({
+      stockId: item.stockId,
+      stockCode: item.stockCode,
+      yapKodId: 'yapKodId' in item ? item.yapKodId : undefined,
+      yapKod: 'yapKod' in item ? item.yapKod || item.configCode || '' : item.configCode || '',
+      quantity: item.transferQuantity,
+      serialNo: item.serialNo || '',
+      serialNo2: item.serialNo2 || '',
+      serialNo3: item.lotNo || '',
+      serialNo4: item.batchNo || '',
+      scannedBarcode: 'scannedBarcode' in item ? item.scannedBarcode || item.stockCode : item.stockCode,
+      sourceWarehouse: formData.sourceWarehouse ? Number(formData.sourceWarehouse) : undefined,
+      targetWarehouse: formData.targetWarehouse ? Number(formData.targetWarehouse) : undefined,
+      sourceCellCode: item.sourceCellCode || '',
+      targetCellCode: item.targetCellCode || '',
+    })),
+  };
+}
+
 function resolveOrderEndpoints(moduleKey: WorkflowCreateModuleMeta['key']) {
   switch (moduleKey) {
     case 'transfer':
@@ -494,8 +662,18 @@ function resolveCreateEndpoint(moduleKey: WorkflowCreateModuleMeta['key']) {
 
 function resolveFreeCreateEndpoint(moduleKey: WorkflowCreateModuleMeta['key']) {
   switch (moduleKey) {
+    case 'transfer':
+      return '/api/WtHeader/process';
+    case 'warehouse-inbound':
+      return '/api/WiHeader/process';
     case 'warehouse-outbound':
-      return '/api/WoHeader/bulk-create';
+      return '/api/WoHeader/process';
+    case 'shipment':
+      return '/api/ShHeader/process';
+    case 'subcontracting-issue':
+      return '/api/SitHeader/process';
+    case 'subcontracting-receipt':
+      return '/api/SrtHeader/process';
     default:
       return resolveCreateEndpoint(moduleKey);
   }
@@ -561,12 +739,18 @@ export const workflowCreateApi = {
       yplndrStokKod: item.yplndrStokKod || undefined,
     }));
   },
-  async getStokBarcode(barcode: string, barcodeGroup: string = '1', options?: ApiRequestOptions): Promise<ProductBarcodeOption[]> {
-    const response = await apiClient.get<ApiResponse<ProductBarcodeOption[]>>('/api/Erp/getStokBarcode', {
-      params: { bar: barcode, barkodGrubu: barcodeGroup },
-      ...options,
-    });
-    return requireData(response.data, 'workflowCreate.errors.barcodeLoad');
+  async getStokBarcode(barcode: string, options?: ApiRequestOptions): Promise<ProductBarcodeOption[]> {
+    const resolved = await barcodeApi.resolve('product-lookup', barcode, options);
+    return [
+      {
+        barkod: resolved.barcode,
+        stokKodu: resolved.stockCode ?? '',
+        stokAdi: resolved.stockName ?? '',
+        olcuAdi: '',
+        yapKod: resolved.yapKod ?? null,
+        yapAcik: resolved.yapAcik ?? null,
+      },
+    ];
   },
   async getActiveUsers(options?: ApiRequestOptions): Promise<ActiveUserOption[]> {
     const response = await apiClient.get<ApiResponse<ActiveUserOption[]>>('/api/auth/users/active', options);
@@ -591,19 +775,29 @@ export const workflowCreateApi = {
     const payload = (() => {
       switch (moduleMeta.key) {
         case 'transfer':
-          return buildTransferRequest(formData, selectedItems, mode === 'free');
+          return mode === 'free'
+            ? buildTransferProcessRequest(formData, selectedItems)
+            : buildTransferRequest(formData, selectedItems);
         case 'warehouse-inbound':
-          return buildWarehouseRequest(formData, selectedItems, 'inbound');
+          return mode === 'free'
+            ? buildWarehouseInboundProcessRequest(formData, selectedItems)
+            : buildWarehouseRequest(formData, selectedItems, 'inbound');
         case 'warehouse-outbound':
           return mode === 'free'
             ? buildWarehouseOutboundProcessRequest(formData, selectedItems)
             : buildWarehouseRequest(formData, selectedItems, 'outbound');
         case 'shipment':
-          return buildShipmentRequest(formData, selectedItems);
+          return mode === 'free'
+            ? buildShipmentProcessRequest(formData, selectedItems)
+            : buildShipmentRequest(formData, selectedItems);
         case 'subcontracting-issue':
-          return buildSubcontractingRequest(formData, selectedItems, 'issue');
+          return mode === 'free'
+            ? buildSubcontractingProcessRequest(formData, selectedItems, 'issue')
+            : buildSubcontractingRequest(formData, selectedItems, 'issue');
         case 'subcontracting-receipt':
-          return buildSubcontractingRequest(formData, selectedItems, 'receipt');
+          return mode === 'free'
+            ? buildSubcontractingProcessRequest(formData, selectedItems, 'receipt')
+            : buildSubcontractingRequest(formData, selectedItems, 'receipt');
         default:
           throw new Error('Unsupported module');
       }

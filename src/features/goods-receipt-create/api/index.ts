@@ -3,11 +3,12 @@ import type { ApiRequestOptions } from '@/lib/request-utils';
 import { buildPagedRequest } from '@/lib/paged';
 import type { ApiResponse, PagedResponse } from '@/types/paged';
 import type {
-  BulkCreateRequest,
   Customer,
+  GenerateGoodsReceiptOrderRequest,
   GoodsReceiptFormValues,
   Order,
   OrderItem,
+  ProcessGoodsReceiptRequest,
   Product,
   Project,
   ReceiptMode,
@@ -35,67 +36,47 @@ function normalizeBranchCode(branchCode?: string | number | null): string {
   return normalized.length > 0 ? normalized : '0';
 }
 
-function buildGoodsReceiptBulkCreateRequest(
+function buildGoodsReceiptGenerateOrderRequest(
   formData: GoodsReceiptFormValues,
-  selectedItems: SelectedReceiptItem[],
-  isStockBased: boolean,
+  selectedItems: SelectedOrderItem[],
   branchCode?: string | number | null,
-): BulkCreateRequest {
+): GenerateGoodsReceiptOrderRequest {
   const currentYear = new Date().getFullYear().toString();
   const plannedDate = formData.receiptDate
     ? new Date(formData.receiptDate).toISOString()
     : new Date().toISOString();
 
-  const lines = isStockBased
-    ? []
-    : selectedItems.map((item) => {
-        const orderItem = item as SelectedOrderItem;
-        return {
-          clientKey: generateGuid(),
-          stockId: orderItem.stockId,
-          stockCode: orderItem.stockCode || orderItem.productCode || '',
-          yapKodId: orderItem.yapKodId,
-          quantity: orderItem.orderedQty || 0,
-          unit: orderItem.unit || undefined,
-          erpOrderNo: orderItem.siparisNo || undefined,
-          erpOrderId: orderItem.orderID?.toString() || undefined,
-          description: orderItem.stockName || orderItem.productName || undefined,
-        };
-      });
-
-  const importLines = selectedItems.map((item) => {
-    const clientKey = generateGuid();
-    const correspondingLine = isStockBased
-      ? null
-      : lines.find((line) => line.stockCode === item.stockCode);
-
-    return {
-      lineClientKey: correspondingLine?.clientKey || null,
-      clientKey,
-      stockId: item.stockId,
-      stockCode: item.stockCode,
-      yapKodId: item.yapKodId,
-      configurationCode: item.configCode || undefined,
-      description1: item.stockName || undefined,
-      description2: undefined,
-    };
-  });
+  const lines = selectedItems.map((item) => ({
+    clientKey: generateGuid(),
+    stockId: item.stockId,
+    stockCode: item.stockCode || item.productCode || '',
+    yapKodId: item.yapKodId,
+    quantity: item.orderedQty || 0,
+    siparisMiktar: item.orderedQty || 0,
+    unit: item.unit || undefined,
+    erpOrderNo: item.siparisNo || undefined,
+    erpOrderId: item.orderID?.toString() || undefined,
+    description: item.stockName || item.productName || undefined,
+  }));
 
   const serialLines = selectedItems
     .map((item, index) => {
       if (!item.serialNo && !item.lotNo && !item.batchNo && !item.configCode) {
         return null;
       }
-
-      const importLine = importLines[index];
-      if (!importLine) {
+      const line = lines[index];
+      if (!line) {
         return null;
       }
 
       return {
-        importLineClientKey: importLine.clientKey,
+        lineClientKey: line.clientKey,
+        stockCode: item.stockCode,
+        yapKod: item.configCode || undefined,
         serialNo: item.serialNo || '',
         quantity: item.receiptQuantity || 0,
+        sourceWarehouseId: undefined,
+        targetWarehouseId: item.warehouseId,
         sourceCellCode: undefined,
         targetCellCode: undefined,
         serialNo2: item.lotNo,
@@ -105,18 +86,54 @@ function buildGoodsReceiptBulkCreateRequest(
     })
     .filter((line): line is NonNullable<typeof line> => line !== null);
 
+  return {
+    header: {
+      branchCode: normalizeBranchCode(branchCode),
+      projectCode: formData.projectCode || undefined,
+      orderId: selectedItems[0]?.siparisNo || undefined,
+      documentType: 'GR',
+      yearCode: currentYear,
+      description1: formData.documentNo || undefined,
+      description2: formData.notes || undefined,
+      priorityLevel: 0,
+      plannedDate,
+      isPlanned: false,
+      customerId: formData.customerRefId,
+      customerCode: formData.customerId || '',
+      returnCode: false,
+      ocrSource: false,
+      description3: undefined,
+      description4: undefined,
+      description5: undefined,
+    },
+    lines: lines.length > 0 ? lines : undefined,
+    lineSerials: serialLines.length > 0 ? serialLines : undefined,
+  };
+}
+
+function buildGoodsReceiptProcessRequest(
+  formData: GoodsReceiptFormValues,
+  selectedItems: SelectedStockItem[],
+  branchCode?: string | number | null,
+): ProcessGoodsReceiptRequest {
+  const currentYear = new Date().getFullYear().toString();
+  const plannedDate = formData.receiptDate
+    ? new Date(formData.receiptDate).toISOString()
+    : new Date().toISOString();
+
   const routes = selectedItems
-    .map((item, index) => {
-      const importLine = importLines[index];
-      if (!importLine || !item.receiptQuantity || item.receiptQuantity <= 0) {
+    .map((item) => {
+      if (!item.receiptQuantity || item.receiptQuantity <= 0) {
         return null;
       }
 
       return {
-        importLineClientKey: importLine.clientKey,
+        stockId: item.stockId,
+        stockCode: item.stockCode,
+        yapKodId: item.yapKodId,
+        yapKod: item.configCode || undefined,
         scannedBarcode: '',
         quantity: item.receiptQuantity,
-        description: item.stockName || undefined,
         serialNo: item.serialNo,
         serialNo2: item.lotNo,
         serialNo3: item.batchNo,
@@ -133,7 +150,7 @@ function buildGoodsReceiptBulkCreateRequest(
     header: {
       branchCode: normalizeBranchCode(branchCode),
       projectCode: formData.projectCode || undefined,
-      orderId: isStockBased ? undefined : (selectedItems[0] && 'siparisNo' in selectedItems[0] ? selectedItems[0].siparisNo : undefined),
+      orderId: undefined,
       documentType: 'GR',
       yearCode: currentYear,
       description1: formData.documentNo || undefined,
@@ -149,10 +166,6 @@ function buildGoodsReceiptBulkCreateRequest(
       description4: undefined,
       description5: undefined,
     },
-    documents: null,
-    lines: lines.length > 0 ? lines : undefined,
-    importLines: importLines.length > 0 ? importLines : undefined,
-    serialLines: serialLines.length > 0 ? serialLines : undefined,
     routes: routes.length > 0 ? routes : undefined,
   };
 }
@@ -257,11 +270,20 @@ export const goodsReceiptCreateApi = {
     receiptMode: ReceiptMode,
     branchCode?: string | number | null,
   ): Promise<number> {
-    const request = buildGoodsReceiptBulkCreateRequest(formData, selectedItems, receiptMode === 'stock', branchCode);
-    const response = await apiClient.post<ApiResponse<number>>('/api/GrHeader/bulkCreate', request);
-    if (!response.data.success) {
-      throw new Error(response.data.message || 'Mal kabul oluşturulamadı.');
+    if (receiptMode === 'stock') {
+      const request = buildGoodsReceiptProcessRequest(formData, selectedItems.filter((item): item is SelectedStockItem => !('siparisNo' in item)), branchCode);
+      const response = await apiClient.post<ApiResponse<number>>('/api/GrHeader/process', request);
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Mal kabul işlemi oluşturulamadı.');
+      }
+      return response.data.data || 0;
     }
-    return response.data.data || 0;
+
+    const request = buildGoodsReceiptGenerateOrderRequest(formData, selectedItems.filter((item): item is SelectedOrderItem => 'siparisNo' in item), branchCode);
+    const response = await apiClient.post<ApiResponse<{ id: number }>>('/api/GrHeader/generate', request);
+    if (!response.data.success) {
+      throw new Error(response.data.message || 'Mal kabul emri oluşturulamadı.');
+    }
+    return response.data.data?.id || 0;
   },
 };

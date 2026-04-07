@@ -45,7 +45,9 @@ export function GenericCollectedScreen({
         key: `${item.importLine.lineId}-${route.id}-${route.scannedBarcode || 'barcode'}-${index}`,
         barcode: route.scannedBarcode || '-',
         stockCode: route.stockCode || '-',
-        stockName: route.description || '-',
+        stockName: route.stockName || '-',
+        yapKod: route.yapKod || '-',
+        yapAcik: route.yapAcik || '-',
         quantity: route.quantity,
         serialNo: route.serialNo || '-',
       })),
@@ -78,6 +80,11 @@ export function GenericCollectedScreen({
               <Text style={styles.rowTitle}>{row.stockName}</Text>
               <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>{t(barcodeValueKey, { value: row.barcode })}</Text>
               <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>{t(collectedStockCodeKey, { value: row.stockCode })}</Text>
+              {row.yapKod !== '-' ? (
+                <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>
+                  {t('workflow.yapKodLabel', { value: `${row.yapKod}${row.yapAcik !== '-' ? ` - ${row.yapAcik}` : ''}` })}
+                </Text>
+              ) : null}
               <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>{row.quantity}</Text>
               <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>{t(collectedSerialNoKey, { value: row.serialNo })}</Text>
             </View>

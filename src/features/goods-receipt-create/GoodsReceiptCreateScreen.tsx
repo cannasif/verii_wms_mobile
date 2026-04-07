@@ -62,13 +62,19 @@ function sanitizeDocumentNo(value: string): string {
   return value.replace(/\D/g, '');
 }
 
-export function GoodsReceiptCreateScreen(): React.ReactElement {
+export function GoodsReceiptCreateScreen({
+  forcedMode,
+  lockMode = false,
+}: {
+  forcedMode?: ReceiptMode;
+  lockMode?: boolean;
+} = {}): React.ReactElement {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const branch = useAuthStore((state) => state.branch);
 
   const [currentStep, setCurrentStep] = useState<StepKey>(1);
-  const [receiptMode, setReceiptMode] = useState<ReceiptMode>('order');
+  const [receiptMode, setReceiptMode] = useState<ReceiptMode>(forcedMode ?? 'order');
   const [orderTab, setOrderTab] = useState<OrderMobileTab>('orders');
   const [stockTab, setStockTab] = useState<StockMobileTab>('stocks');
   const [activeOrderNumber, setActiveOrderNumber] = useState<string | null>(null);
@@ -274,10 +280,19 @@ export function GoodsReceiptCreateScreen(): React.ReactElement {
   };
 
   const selectMode = (mode: ReceiptMode): void => {
+    if (lockMode && forcedMode) {
+      return;
+    }
     setReceiptMode(mode);
     resetStepTwoState();
     setCurrentStep(1);
   };
+
+  React.useEffect(() => {
+    if (forcedMode) {
+      setReceiptMode(forcedMode);
+    }
+  }, [forcedMode]);
 
   const toggleOrderItem = (item: OrderItem): void => {
     const itemId = item.id || '';
@@ -451,14 +466,16 @@ export function GoodsReceiptCreateScreen(): React.ReactElement {
         <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{t('goodsReceiptMobile.subtitle')}</Text>
       </View>
 
-      <View style={styles.modeRow}>
-        <Pressable style={[styles.modeChip, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceStrong }, receiptMode === 'order' ? [styles.modeChipActive, { borderColor: theme.colors.primary }] : null]} onPress={() => selectMode('order')}>
-          <Text style={styles.modeChipText}>{t('goodsReceiptMobile.modeOrder')}</Text>
-        </Pressable>
-        <Pressable style={[styles.modeChip, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceStrong }, receiptMode === 'stock' ? [styles.modeChipActive, { borderColor: theme.colors.primary }] : null]} onPress={() => selectMode('stock')}>
-          <Text style={styles.modeChipText}>{t('goodsReceiptMobile.modeStock')}</Text>
-        </Pressable>
-      </View>
+      {!lockMode ? (
+        <View style={styles.modeRow}>
+          <Pressable style={[styles.modeChip, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceStrong }, receiptMode === 'order' ? [styles.modeChipActive, { borderColor: theme.colors.primary }] : null]} onPress={() => selectMode('order')}>
+            <Text style={styles.modeChipText}>{t('goodsReceiptMobile.modeOrder')}</Text>
+          </Pressable>
+          <Pressable style={[styles.modeChip, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceStrong }, receiptMode === 'stock' ? [styles.modeChipActive, { borderColor: theme.colors.primary }] : null]} onPress={() => selectMode('stock')}>
+            <Text style={styles.modeChipText}>{t('goodsReceiptMobile.modeStock')}</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <View style={styles.stepIndicatorRow}>
         {[1, 2].map((step) => (

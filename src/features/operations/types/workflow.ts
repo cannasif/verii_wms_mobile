@@ -16,6 +16,8 @@ export type WorkflowModuleKey =
   | 'subcontracting-issue'
   | 'subcontracting-receipt';
 
+export type WorkflowHeaderMode = 'assigned' | 'list' | 'approval';
+
 export interface WorkflowAssignedItem {
   id: number;
   documentNo?: string | null;
@@ -88,15 +90,24 @@ export interface WorkflowModuleConfig {
   createDescriptionKey: string;
   assignedTitleKey: string;
   assignedDescriptionKey: string;
+  approvalTitleKey: string;
+  approvalDescriptionKey: string;
   pendingTitleKey: string;
   pendingTextKey: string;
+  approvalPendingTitleKey: string;
+  approvalPendingTextKey: string;
   emptyTitleKey: string;
   emptyDescriptionKey: string;
+  approvalEmptyTitleKey: string;
+  approvalEmptyDescriptionKey: string;
   loadFailedKey: string;
+  approvalLoadFailedKey: string;
   defaultFilterColumn: string;
   filterColumns: readonly FilterColumnConfig[];
   assignedEndpoint: string;
   listEndpoint: string;
+  approvalListEndpoint: string;
+  approvalActionEndpoint: string;
   importLineEndpoint: string;
   lineEndpoint: string;
   lineSerialEndpoint: string;

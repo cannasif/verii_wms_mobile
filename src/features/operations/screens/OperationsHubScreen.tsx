@@ -56,6 +56,12 @@ export function OperationsHubScreen(): React.ReactElement {
                 <Text style={[styles.ghostButtonText, { color: theme.colors.primary }]}>{t('workflow.actions.assigned')}</Text>
               </Pressable>
               <Pressable
+                style={[styles.ghostButton, { borderColor: theme.colors.primaryStrong }]}
+                onPress={() => router.push(`/(tabs)/flows/${module.key}/approval` as never)}
+              >
+                <Text style={[styles.ghostButtonText, { color: theme.colors.primary }]}>{t('workflow.actions.approval')}</Text>
+              </Pressable>
+              <Pressable
                 style={[styles.primaryButton, { backgroundColor: theme.colors.primaryStrong }]}
                 onPress={() => router.push(`/(tabs)/flows/${module.key}/list` as never)}
               >
@@ -66,6 +72,8 @@ export function OperationsHubScreen(): React.ReactElement {
 
             <View style={styles.metaRow}>
               <Text style={[styles.metaText, { color: theme.colors.textMuted }]}>{t('workflow.assignedRequestHint')}</Text>
+              <Text style={[styles.metaDivider, { color: theme.colors.textMuted }]}>•</Text>
+              <Text style={[styles.metaText, { color: theme.colors.textMuted }]}>{t('workflow.approvalRequestHint')}</Text>
               <Text style={[styles.metaDivider, { color: theme.colors.textMuted }]}>•</Text>
               <Text style={[styles.metaText, { color: theme.colors.textMuted }]}>{t('workflow.listRequestHint')}</Text>
             </View>
@@ -99,9 +107,9 @@ const styles = StyleSheet.create({
   copy: { flex: 1, gap: 4 },
   cardTitle: { fontSize: 17, fontWeight: '900' },
   cardSubtitle: { lineHeight: 19 },
-  actions: { flexDirection: 'row', gap: 10 },
+  actions: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
   secondaryButton: {
-    flex: 1,
+    width: '48%',
     minHeight: 48,
     borderRadius: 16,
     alignItems: 'center',
@@ -110,7 +118,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: { fontWeight: '800' },
   ghostButton: {
-    flex: 1,
+    width: '48%',
     minHeight: 48,
     borderRadius: 16,
     alignItems: 'center',
@@ -119,7 +127,7 @@ const styles = StyleSheet.create({
   },
   ghostButtonText: { fontWeight: '800' },
   primaryButton: {
-    flex: 1,
+    width: '48%',
     minHeight: 48,
     borderRadius: 16,
     alignItems: 'center',

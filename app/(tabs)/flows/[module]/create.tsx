@@ -15,7 +15,7 @@ export default function WorkflowCreateRoute(): React.ReactElement {
   }
 
   if (module.key === 'goods-receipt') {
-    return <GoodsReceiptCreateScreen />;
+    return <GoodsReceiptCreateScreen forcedMode='order' lockMode />;
   }
 
   if (
@@ -26,7 +26,7 @@ export default function WorkflowCreateRoute(): React.ReactElement {
     module.key === 'subcontracting-issue' ||
     module.key === 'subcontracting-receipt'
   ) {
-    return <WorkflowOrderCreateScreen module={module} />;
+    return <WorkflowOrderCreateScreen module={module} forcedMode='order' lockMode />;
   }
 
   return <WorkflowCreateScreen module={module} />;

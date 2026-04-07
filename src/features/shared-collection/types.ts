@@ -1,4 +1,5 @@
 import type { ApiRequestOptions } from '@/lib/request-utils';
+import type { BarcodeDefinition } from '@/services/barcode-types';
 import type {
   BaseWorkflowImportLineDetail,
   BaseWorkflowRouteDetail,
@@ -15,13 +16,18 @@ export interface CollectionStockBarcode {
 
 export interface CollectionLine {
   id: number;
-  stockCode: string;
-  stockName: string;
+  stockCode?: string;
+  stockName?: string;
+  yapKod?: string | null;
+  yapAcik?: string | null;
   quantity: number;
   unit: string;
 }
 
-export interface CollectionRoute extends BaseWorkflowRouteDetail {}
+export interface CollectionRoute extends BaseWorkflowRouteDetail {
+  yapKod?: string | null;
+  yapAcik?: string | null;
+}
 
 export interface CollectionImportLine extends Pick<BaseWorkflowImportLineDetail, 'lineId'> {
   lineId: number;
@@ -34,15 +40,15 @@ export interface CollectionCollectedItem {
 
 export interface CollectionApi {
   getAssignedOrderLines: (headerId: number, options?: ApiRequestOptions) => Promise<{ lines: CollectionLine[] }>;
-  getStokBarcode: (barcode: string, barcodeGroup?: string, options?: ApiRequestOptions) => Promise<CollectionStockBarcode[]>;
+  getStokBarcode: (barcode: string, options?: ApiRequestOptions) => Promise<CollectionStockBarcode[]>;
+  getBarcodeDefinition?: (options?: ApiRequestOptions) => Promise<BarcodeDefinition>;
   addBarcodeToOrder: (request: {
     headerId: number;
-    lineId: number;
     barcode: string;
-    stockCode: string;
-    stockName: string;
-    yapKod: string;
-    yapAcik: string;
+    stockCode?: string;
+    stockName?: string;
+    yapKod?: string;
+    yapAcik?: string;
     quantity: number;
     serialNo: string;
     serialNo2: string;

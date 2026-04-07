@@ -2,9 +2,7 @@ import { useAuthStore } from '@/store/auth';
 import { usePagedFlatList } from '@/hooks/usePagedFlatList';
 import { getWorkflowModule } from '../config/workflow-modules';
 import { workflowApi } from '../api/workflow-api';
-import type { WorkflowModuleKey } from '../types/workflow';
-
-type WorkflowHeaderMode = 'assigned' | 'list';
+import type { WorkflowHeaderMode, WorkflowModuleKey } from '../types/workflow';
 
 export function useWorkflowHeaders(moduleKey: WorkflowModuleKey, mode: WorkflowHeaderMode) {
   const userId = useAuthStore((state) => state.user?.id);
@@ -12,15 +10,22 @@ export function useWorkflowHeaders(moduleKey: WorkflowModuleKey, mode: WorkflowH
 
   return usePagedFlatList({
     queryKey: ['workflow', moduleKey, mode, userId ?? 0],
-    enabled: Boolean(module) && (mode === 'list' || Boolean(userId)),
+    enabled: Boolean(module) && (mode === 'list' || mode === 'approval' || Boolean(userId)),
     pageSize: 20,
     defaultSortBy: 'Id',
     defaultSortDirection: 'desc',
     defaultFilterColumn: module?.defaultFilterColumn,
     columns: module?.filterColumns ?? [],
-    fetchPage: (params) =>
-      mode === 'assigned'
-        ? workflowApi.getAssignedHeaders(moduleKey, userId ?? 0, params)
-        : workflowApi.getHeaders(moduleKey, params),
+    fetchPage: (params) => {
+      if (mode === 'assigned') {
+        return workflowApi.getAssignedHeaders(moduleKey, userId ?? 0, params);
+      }
+
+      if (mode === 'approval') {
+        return workflowApi.getApprovalHeaders(moduleKey, params);
+      }
+
+      return workflowApi.getHeaders(moduleKey, params);
+    },
   });
 }

@@ -19,10 +19,25 @@ export interface BaseDocumentLineRequest {
   stockCode: string;
   yapKodId?: number;
   quantity: number;
+  siparisMiktar?: number;
   unit?: string;
   erpOrderNo?: string;
   erpOrderId?: string;
   description?: string;
+}
+
+export interface BaseDocumentLineSerialRequest {
+  quantity: number;
+  serialNo?: string;
+  serialNo2?: string;
+  serialNo3?: string;
+  serialNo4?: string;
+  sourceWarehouseId?: number;
+  targetWarehouseId?: number;
+  sourceCellCode?: string;
+  targetCellCode?: string;
+  lineClientKey?: string;
+  lineGroupGuid?: string;
 }
 
 export interface BaseDocumentImportLineRequest {

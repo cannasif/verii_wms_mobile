@@ -8,9 +8,43 @@ import { useTheme } from '@/providers/ThemeProvider';
 import type { WorkflowModuleConfig } from '../types/workflow';
 import { WorkflowIcon } from './WorkflowIcon';
 
+function supportsProcess(moduleKey: WorkflowModuleConfig['key']): boolean {
+  return (
+    moduleKey === 'goods-receipt' ||
+    moduleKey === 'transfer' ||
+    moduleKey === 'warehouse-inbound' ||
+    moduleKey === 'warehouse-outbound' ||
+    moduleKey === 'shipment' ||
+    moduleKey === 'subcontracting-issue' ||
+    moduleKey === 'subcontracting-receipt'
+  );
+}
+
+function getProcessTranslationBase(moduleKey: WorkflowModuleConfig['key']): string {
+  switch (moduleKey) {
+    case 'goods-receipt':
+      return 'workflow.goodsReceipt';
+    case 'transfer':
+      return 'workflow.transfer';
+    case 'warehouse-inbound':
+      return 'workflow.warehouseInbound';
+    case 'warehouse-outbound':
+      return 'workflow.warehouseOutbound';
+    case 'shipment':
+      return 'workflow.shipment';
+    case 'subcontracting-issue':
+      return 'workflow.subcontractingIssue';
+    case 'subcontracting-receipt':
+      return 'workflow.subcontractingReceipt';
+    default:
+      return 'workflow.transfer';
+  }
+}
+
 export function WorkflowModuleScreen({ module }: { module: WorkflowModuleConfig }): React.ReactElement {
   const { t } = useTranslation();
   const { theme } = useTheme();
+  const processTranslationBase = getProcessTranslationBase(module.key);
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
@@ -33,10 +67,22 @@ export function WorkflowModuleScreen({ module }: { module: WorkflowModuleConfig 
           <Text style={styles.actionTitle}>{t(module.createTitleKey)}</Text>
           <Text style={[styles.actionText, { color: theme.colors.textSecondary }]}>{t(module.createDescriptionKey)}</Text>
         </Pressable>
+        {supportsProcess(module.key) ? (
+          <Pressable style={[styles.actionCard, { backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.02)' : 'rgba(255,255,255,0.03)', borderColor: theme.colors.border }]} onPress={() => router.push(`/(tabs)/flows/${module.key}/process` as never)}>
+            <Text style={[styles.actionEyebrow, { color: theme.colors.primary }]}>{t('workflow.actions.process')}</Text>
+            <Text style={styles.actionTitle}>{t(`${processTranslationBase}.processTitle`)}</Text>
+            <Text style={[styles.actionText, { color: theme.colors.textSecondary }]}>{t(`${processTranslationBase}.processDescription`)}</Text>
+          </Pressable>
+        ) : null}
         <Pressable style={[styles.actionCard, { backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.02)' : 'rgba(255,255,255,0.03)', borderColor: theme.colors.border }]} onPress={() => router.push(`/(tabs)/flows/${module.key}/assigned` as never)}>
           <Text style={[styles.actionEyebrow, { color: theme.colors.primary }]}>{t('workflow.actions.assigned')}</Text>
           <Text style={styles.actionTitle}>{t(module.assignedTitleKey)}</Text>
           <Text style={[styles.actionText, { color: theme.colors.textSecondary }]}>{t(module.assignedDescriptionKey)}</Text>
+        </Pressable>
+        <Pressable style={[styles.actionCard, { backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.02)' : 'rgba(255,255,255,0.03)', borderColor: theme.colors.border }]} onPress={() => router.push(`/(tabs)/flows/${module.key}/approval` as never)}>
+          <Text style={[styles.actionEyebrow, { color: theme.colors.primary }]}>{t('workflow.actions.approval')}</Text>
+          <Text style={styles.actionTitle}>{t(module.approvalTitleKey)}</Text>
+          <Text style={[styles.actionText, { color: theme.colors.textSecondary }]}>{t(module.approvalDescriptionKey)}</Text>
         </Pressable>
         <Pressable style={[styles.actionCard, { backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.02)' : 'rgba(255,255,255,0.03)', borderColor: theme.colors.border }]} onPress={() => router.push(`/(tabs)/flows/${module.key}/list` as never)}>
           <Text style={[styles.actionEyebrow, { color: theme.colors.primary }]}>{t('workflow.actions.list')}</Text>
