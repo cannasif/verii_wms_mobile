@@ -4,8 +4,19 @@ import { z } from 'zod';
 export const createLoginSchema = () =>
   z.object({
     branchId: z.string().min(1, i18n.t('validation.branchRequired')),
-    email: z.string().min(1, i18n.t('validation.emailRequired')).email(i18n.t('validation.emailInvalid')),
-    password: z.string().min(1, i18n.t('validation.passwordRequired')),
+    email: z
+      .string()
+      .transform((s) => s.trim())
+      .pipe(
+        z
+          .string()
+          .min(1, i18n.t('validation.emailRequired'))
+          .email(i18n.t('validation.emailInvalid')),
+      ),
+    password: z
+      .string()
+      .min(1, i18n.t('validation.passwordRequired'))
+      .max(200, i18n.t('validation.passwordMaxLength')),
     rememberMe: z.boolean(),
   });
 
