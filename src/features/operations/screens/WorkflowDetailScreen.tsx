@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { useQueries, useQuery } from '@tanstack/react-query';
+import { PackageIcon } from 'hugeicons-react-native';
 import { useTranslation } from 'react-i18next';
 import { Text } from '@/components/ui/Text';
 import { ScreenState } from '@/components/ui/ScreenState';
@@ -71,6 +72,10 @@ function buildInfo(
 function DetailMeta({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return <Text style={styles.rowMeta}>{label}: {value}</Text>;
+}
+
+function supportsPackageMove(moduleKey: WorkflowModuleConfig['key']): moduleKey is 'transfer' | 'shipment' {
+  return moduleKey === 'transfer' || moduleKey === 'shipment';
 }
 
 export function WorkflowDetailScreen({
@@ -221,6 +226,27 @@ export function WorkflowDetailScreen({
         <Text style={styles.title}>{t('workflow.detailTitle', { title: t(module.titleKey) })}</Text>
         <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{t('workflow.detailText')}</Text>
       </View>
+
+      {supportsPackageMove(module.key) ? (
+        <SectionCard title={t('packageMoveMobile.cardTitle')} subtitle={t('packageMoveMobile.cardSubtitle')}>
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: '/(tabs)/flows/[module]/package-move/[headerId]',
+                params: {
+                  module: module.key,
+                  headerId: String(headerId),
+                  target: info.title || `#${headerId}`,
+                },
+              } as never)
+            }
+            style={[styles.packageMoveButton, { backgroundColor: theme.colors.primaryStrong }]}
+          >
+            <PackageIcon size={18} color="#fff" />
+            <Text style={styles.packageMoveButtonText}>{t('packageMoveMobile.openAction')}</Text>
+          </Pressable>
+        </SectionCard>
+      ) : null}
 
       <CollectionHeaderInfoCard info={info} />
 
@@ -378,6 +404,16 @@ const styles = StyleSheet.create({
   heroEyebrow: { color: COLORS.accent, fontWeight: '900', fontSize: 12, textTransform: 'uppercase' },
   title: { fontSize: 24, fontWeight: '900' },
   subtitle: { color: COLORS.textSecondary, lineHeight: 21 },
+  packageMoveButton: {
+    borderRadius: RADII.xl,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+  },
+  packageMoveButtonText: { color: '#fff', fontWeight: '900', fontSize: 15 },
   centered: { minHeight: 140, alignItems: 'center', justifyContent: 'center' },
   emptyText: { color: COLORS.textSecondary, textAlign: 'center' },
   rowCard: {

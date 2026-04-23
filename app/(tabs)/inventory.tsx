@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { Alert02Icon, PackageSearchIcon, WarehouseIcon } from 'hugeicons-react-native';
+import { Alert02Icon, ArrowRight01Icon, PackageIcon, PackageSearchIcon, TaskDaily02Icon, WarehouseIcon } from 'hugeicons-react-native';
 import { useTranslation } from 'react-i18next';
 import { PageShell } from '@/components/layout/PageShell';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
@@ -84,6 +85,65 @@ export default function InventoryScreen(): React.ReactElement {
           </SectionCard>
         </View>
       )}
+
+      <View style={styles.actionList}>
+        <Pressable onPress={() => router.push('/(tabs)/inventory/stock-balance' as never)}>
+          {({ pressed }) => (
+            <SectionCard style={[styles.actionCard, pressed && styles.actionPressed]}>
+              <View style={styles.actionLeft}>
+                <View style={[styles.actionIconWrap, { backgroundColor: theme.mode === 'light' ? 'rgba(2,132,199,0.08)' : 'rgba(56,189,248,0.14)' }]}>
+                  <WarehouseIcon size={20} color={theme.colors.primary} />
+                </View>
+                <View style={styles.actionCopy}>
+                  <Text style={styles.actionTitle}>{t('inventoryMobile.stock.title')}</Text>
+                  <Text style={[styles.actionText, { color: theme.colors.textSecondary }]}>
+                    {t('inventoryMobile.stock.subtitle')}
+                  </Text>
+                </View>
+              </View>
+              <ArrowRight01Icon size={18} color={theme.colors.primary} />
+            </SectionCard>
+          )}
+        </Pressable>
+
+        <Pressable onPress={() => router.push('/(tabs)/inventory/serial-balance' as never)}>
+          {({ pressed }) => (
+            <SectionCard style={[styles.actionCard, pressed && styles.actionPressed]}>
+              <View style={styles.actionLeft}>
+                <View style={[styles.actionIconWrap, { backgroundColor: theme.mode === 'light' ? 'rgba(15,118,110,0.08)' : 'rgba(45,212,191,0.14)' }]}>
+                  <TaskDaily02Icon size={20} color={theme.colors.success} />
+                </View>
+                <View style={styles.actionCopy}>
+                  <Text style={styles.actionTitle}>{t('inventoryMobile.serial.title')}</Text>
+                  <Text style={[styles.actionText, { color: theme.colors.textSecondary }]}>
+                    {t('inventoryMobile.serial.subtitle')}
+                  </Text>
+                </View>
+              </View>
+              <ArrowRight01Icon size={18} color={theme.colors.primary} />
+            </SectionCard>
+          )}
+        </Pressable>
+
+        <Pressable onPress={() => router.push('/(tabs)/inventory/packages' as never)}>
+          {({ pressed }) => (
+            <SectionCard style={[styles.actionCard, pressed && styles.actionPressed]}>
+              <View style={styles.actionLeft}>
+                <View style={[styles.actionIconWrap, { backgroundColor: theme.mode === 'light' ? 'rgba(124,58,237,0.08)' : 'rgba(168,85,247,0.14)' }]}>
+                  <PackageIcon size={20} color={theme.colors.accent} />
+                </View>
+                <View style={styles.actionCopy}>
+                  <Text style={styles.actionTitle}>{t('packageMobile.list.title')}</Text>
+                  <Text style={[styles.actionText, { color: theme.colors.textSecondary }]}>
+                    {t('packageMobile.list.subtitle')}
+                  </Text>
+                </View>
+              </View>
+              <ArrowRight01Icon size={18} color={theme.colors.primary} />
+            </SectionCard>
+          )}
+        </Pressable>
+      </View>
     </PageShell>
   );
 }
@@ -99,4 +159,23 @@ const styles = StyleSheet.create({
   smallCard: { flex: 1, gap: SPACING.xs, borderRadius: RADII.xl },
   value: { fontSize: 24, fontWeight: '900' },
   label: { lineHeight: 18 },
+  actionList: { gap: SPACING.sm, marginTop: SPACING.md },
+  actionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.sm,
+  },
+  actionPressed: { opacity: 0.92 },
+  actionLeft: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, flex: 1 },
+  actionIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: RADII.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionCopy: { flex: 1, gap: 4 },
+  actionTitle: { fontSize: 15, fontWeight: '900' },
+  actionText: { lineHeight: 18 },
 });
