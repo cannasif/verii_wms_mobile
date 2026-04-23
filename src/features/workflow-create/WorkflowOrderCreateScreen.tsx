@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { AppDialog } from '@/components/ui/AppDialog';
 import { ScreenState } from '@/components/ui/ScreenState';
 import { Text } from '@/components/ui/Text';
+import { PagedSelectionSheet } from '@/components/ui/PagedSelectionSheet';
 import { COLORS, LAYOUT, RADII, SPACING } from '@/constants/theme';
 import { normalizeError } from '@/lib/errors';
 import { showError, showWarning } from '@/lib/feedback';
@@ -28,9 +29,11 @@ import type {
   SelectedWorkflowItem,
   SelectedWorkflowOrderItem,
   SelectedWorkflowStockItem,
+  YapKodOption,
   WarehouseOption,
   WorkflowCreateFormValues,
   WorkflowCreateModuleMeta,
+  WorkflowOrder,
   WorkflowOrderItem,
 } from './types';
 
@@ -46,11 +49,6 @@ function parseDecimalInput(value: string): number {
 
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function parseCountInput(value: string): number {
-  const parsed = Number(value.replace(/[^0-9]/g, ''));
-  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 1;
 }
 
 function buildOrderItemId(item: WorkflowOrderItem, index: number): string {
@@ -105,14 +103,17 @@ export function WorkflowOrderCreateScreen({
   const [activeOrderNumber, setActiveOrderNumber] = useState<string | null>(null);
   const [barcodeInput, setBarcodeInput] = useState('');
   const [quantityInputs, setQuantityInputs] = useState<Record<string, string>>({});
-  const [stockBatchCounts, setStockBatchCounts] = useState<Record<string, string>>({});
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerLocked, setScannerLocked] = useState(false);
   const [customerSheetOpen, setCustomerSheetOpen] = useState(false);
   const [projectSheetOpen, setProjectSheetOpen] = useState(false);
+  const [orderSheetOpen, setOrderSheetOpen] = useState(false);
   const [warehouseSheetOpen, setWarehouseSheetOpen] = useState(false);
   const [userSheetOpen, setUserSheetOpen] = useState(false);
+  const [stockSheetOpen, setStockSheetOpen] = useState(false);
+  const [yapKodSheetOpen, setYapKodSheetOpen] = useState(false);
   const [warehouseTarget, setWarehouseTarget] = useState<'source' | 'target' | string | null>(null);
+  const [yapKodTargetItemId, setYapKodTargetItemId] = useState<string | null>(null);
   const [stepOneErrors, setStepOneErrors] = useState<{
     transferDate?: string;
     documentNo?: string;
@@ -135,25 +136,17 @@ export function WorkflowOrderCreateScreen({
   const [selectedItems, setSelectedItems] = useState<SelectedWorkflowItem[]>([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerOption | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<WorkflowOrder | null>(null);
+  const [selectedSourceWarehouse, setSelectedSourceWarehouse] = useState<WarehouseOption | null>(null);
+  const [selectedTargetWarehouse, setSelectedTargetWarehouse] = useState<WarehouseOption | null>(null);
+  const yapKodTargetItem = selectedItems.find((item) => item.id === yapKodTargetItemId);
 
-  const customersQuery = useQuery({ queryKey: ['workflow-create', 'customers'], queryFn: ({ signal }) => workflowCreateApi.getCustomers({ signal }) });
   const projectsQuery = useQuery({ queryKey: ['workflow-create', 'projects'], queryFn: ({ signal }) => workflowCreateApi.getProjects({ signal }) });
-  const warehousesQuery = useQuery({ queryKey: ['workflow-create', 'warehouses'], queryFn: ({ signal }) => workflowCreateApi.getWarehouses({ signal }) });
-  const usersQuery = useQuery({ queryKey: ['workflow-create', 'users'], queryFn: ({ signal }) => workflowCreateApi.getActiveUsers({ signal }) });
-  const ordersQuery = useQuery({
-    queryKey: ['workflow-create', module.key, 'orders', form.customerId],
-    queryFn: ({ signal }) => workflowCreateApi.getOrdersByCustomer(module.key, form.customerId, { signal }),
-    enabled: mode === 'order' && Boolean(form.customerId),
-  });
   const itemsQuery = useQuery({
     queryKey: ['workflow-create', module.key, 'items', activeOrderNumber],
     queryFn: ({ signal }) => workflowCreateApi.getOrderItems(module.key, activeOrderNumber || '', { signal }),
     enabled: mode === 'order' && Boolean(activeOrderNumber),
-  });
-  const productsQuery = useQuery({
-    queryKey: ['workflow-create', 'products'],
-    queryFn: ({ signal }) => workflowCreateApi.getProducts({ signal }),
-    enabled: meta.supportsFreeMode && mode === 'free',
   });
   const barcodeMutation = useMutation({
     mutationFn: async (barcode: string) => workflowCreateApi.getStokBarcode(barcode),
@@ -177,27 +170,9 @@ export function WorkflowOrderCreateScreen({
     onError: (error: Error) => showError(error, normalizeError(error, t('common.error')).message),
   });
 
-  const customers = customersQuery.data ?? [];
   const projects = projectsQuery.data ?? [];
-  const warehouses = warehousesQuery.data ?? [];
-  const users = usersQuery.data ?? [];
-  const orders = ordersQuery.data ?? [];
-  const products = productsQuery.data ?? [];
   const orderItems = useMemo(() => (itemsQuery.data ?? []).map((item, index) => ({ ...item, id: buildOrderItemId(item, index) })), [itemsQuery.data]);
-  const selectedCountsByStockCode = useMemo(() => {
-    const counts = new Map<string, number>();
-    selectedItems.forEach((item) => {
-      if (isStockItem(item)) {
-        counts.set(item.stockCode, (counts.get(item.stockCode) || 0) + 1);
-      }
-    });
-    return counts;
-  }, [selectedItems]);
-
-  const selectedCustomer = customers.find((item) => item.cariKod === form.customerId);
   const selectedProject = projects.find((item) => item.projeKod === form.projectCode);
-  const selectedSourceWarehouse = warehouses.find((item) => String(item.depoKodu) === form.sourceWarehouse);
-  const selectedTargetWarehouse = warehouses.find((item) => String(item.depoKodu) === form.targetWarehouse);
 
   const setFormValue = <K extends keyof WorkflowCreateFormValues>(key: K, value: WorkflowCreateFormValues[K]) => {
     if (key in stepOneErrors) {
@@ -241,11 +216,12 @@ export function WorkflowOrderCreateScreen({
     setMode(nextMode);
     setSelectedItems([]);
     setQuantityInputs({});
-    setStockBatchCounts({});
     setStockTab('stocks');
     setActiveOrderNumber(null);
+    setSelectedOrder(null);
     if (nextMode === 'free') {
       setForm((prev) => ({ ...prev, customerId: '', customerRefId: undefined }));
+      setSelectedCustomer(null);
     }
   };
 
@@ -375,9 +351,11 @@ export function WorkflowOrderCreateScreen({
     if (warehouseTarget === 'source') {
       setFormValue('sourceWarehouse', String(warehouse.depoKodu));
       setFormValue('sourceWarehouseRefId', warehouse.id);
+      setSelectedSourceWarehouse(warehouse);
     } else if (warehouseTarget === 'target') {
       setFormValue('targetWarehouse', String(warehouse.depoKodu));
       setFormValue('targetWarehouseRefId', warehouse.id);
+      setSelectedTargetWarehouse(warehouse);
     } else if (warehouseTarget) {
       updateSelectedItem(warehouseTarget, { sourceWarehouse: warehouse.depoKodu });
     }
@@ -395,7 +373,7 @@ export function WorkflowOrderCreateScreen({
     createMutation.mutate();
   };
 
-  const loadingBase = customersQuery.isLoading || projectsQuery.isLoading || warehousesQuery.isLoading || usersQuery.isLoading;
+  const loadingBase = projectsQuery.isLoading;
   const freeModeLabel = module.key === 'warehouse-outbound' ? t('workflowCreate.modeProcess') : t('workflowCreate.modeFree');
 
   React.useEffect(() => {
@@ -461,10 +439,10 @@ export function WorkflowOrderCreateScreen({
           mode={mode}
           moduleKey={module.key}
           stepOneErrors={stepOneErrors}
-          selectedCustomer={selectedCustomer}
+          selectedCustomer={selectedCustomer ?? undefined}
           selectedProject={selectedProject}
-          selectedSourceWarehouse={selectedSourceWarehouse}
-          selectedTargetWarehouse={selectedTargetWarehouse}
+          selectedSourceWarehouse={selectedSourceWarehouse ?? undefined}
+          selectedTargetWarehouse={selectedTargetWarehouse ?? undefined}
           onChange={setFormValue}
           onOpenCustomer={() => setCustomerSheetOpen(true)}
           onOpenProject={() => setProjectSheetOpen(true)}
@@ -479,9 +457,9 @@ export function WorkflowOrderCreateScreen({
           stockTab={stockTab}
           setStockTab={setStockTab}
           formCustomerId={form.customerId}
-          orders={orders}
+          selectedOrder={selectedOrder}
           activeOrderNumber={activeOrderNumber}
-          setActiveOrderNumber={setActiveOrderNumber}
+          onOpenOrderPicker={() => setOrderSheetOpen(true)}
           orderItems={orderItems}
           selectedItems={selectedItems}
           toggleOrderItem={toggleOrderItem}
@@ -496,13 +474,7 @@ export function WorkflowOrderCreateScreen({
             setScannerOpen(false);
             setScannerLocked(false);
           }}
-          products={products}
-          selectedCountsByStockCode={selectedCountsByStockCode}
-          stockBatchCounts={stockBatchCounts}
-          setStockBatchCounts={setStockBatchCounts}
-          removeStockItemsByCode={removeStockItemsByCode}
-          addStockItems={addStockItems}
-          parseCountInput={parseCountInput}
+          openStockPicker={() => setStockSheetOpen(true)}
           quantityInputs={quantityInputs}
           handleQuantityInputChange={handleQuantityInputChange}
           handleQuantityBlur={handleQuantityBlur}
@@ -510,6 +482,10 @@ export function WorkflowOrderCreateScreen({
           updateSelectedItem={updateSelectedItem}
           setWarehouseTarget={setWarehouseTarget}
           setWarehouseSheetOpen={setWarehouseSheetOpen}
+          openYapKodPicker={(itemId) => {
+            setYapKodTargetItemId(itemId);
+            setYapKodSheetOpen(true);
+          }}
           isOrderItem={isOrderItem}
           isStockItem={isStockItem}
         />
@@ -526,16 +502,24 @@ export function WorkflowOrderCreateScreen({
         )}
       </View>
 
-      <SelectionSheet<CustomerOption>
+      <PagedSelectionSheet<CustomerOption>
         visible={customerSheetOpen}
         title={t('workflowCreate.fields.customer')}
         placeholder={t('workflowCreate.placeholders.customerSearch')}
         emptyText={t('workflowCreate.emptySearch')}
-        items={customers}
         selectedValue={form.customerId}
+        queryKey={['workflow-create', 'customers-paged']}
+        fetchPage={({ pageNumber, pageSize, search, signal }) => workflowCreateApi.getCustomersPaged(pageNumber, pageSize, search, { signal })}
         getValue={(item) => item.cariKod}
         getLabel={(item) => item.cariIsim + ' (' + item.cariKod + ')'}
-        onSelect={(item) => { setFormValue('customerId', item.cariKod); setFormValue('customerRefId', item.id); setSelectedItems([]); setActiveOrderNumber(null); }}
+        onSelect={(item) => {
+          setSelectedCustomer(item);
+          setFormValue('customerId', item.cariKod);
+          setFormValue('customerRefId', item.id);
+          setSelectedItems([]);
+          setActiveOrderNumber(null);
+          setSelectedOrder(null);
+        }}
         onClose={() => setCustomerSheetOpen(false)}
       />
 
@@ -552,24 +536,97 @@ export function WorkflowOrderCreateScreen({
         onClose={() => setProjectSheetOpen(false)}
       />
 
-      <SelectionSheet<WarehouseOption>
+      <PagedSelectionSheet<WorkflowOrder>
+        visible={orderSheetOpen}
+        title={t('workflowCreate.pickOrder')}
+        placeholder={t('workflowCreate.placeholders.orderSearch')}
+        emptyText={t('workflowCreate.noOrderSelected')}
+        selectedValue={activeOrderNumber ?? undefined}
+        queryKey={['workflow-create', module.key, 'order-picker', form.customerId]}
+        fetchPage={({ pageNumber, pageSize, search, signal }) =>
+          workflowCreateApi.getOrdersByCustomerClientSliced(module.key, form.customerId, pageNumber, pageSize, search, { signal })
+        }
+        getValue={(item) => item.siparisNo}
+        getLabel={(item) => `${item.siparisNo} · ${item.customerName || item.customerCode || '-'}${item.projectCode ? ` · ${item.projectCode}` : ''}`}
+        onSelect={(item) => {
+          setSelectedOrder(item);
+          setActiveOrderNumber(item.siparisNo);
+        }}
+        onClose={() => setOrderSheetOpen(false)}
+      />
+
+      <PagedSelectionSheet<WarehouseOption>
         visible={warehouseSheetOpen}
         title={t('workflowCreate.fields.warehouse')}
         placeholder={t('workflowCreate.placeholders.warehouseSearch')}
         emptyText={t('workflowCreate.emptySearch')}
-        items={warehouses}
+        selectedValue={
+          warehouseTarget === 'source'
+            ? form.sourceWarehouse
+            : warehouseTarget === 'target'
+              ? form.targetWarehouse
+              : undefined
+        }
+        queryKey={['workflow-create', 'warehouses-paged', warehouseTarget]}
+        fetchPage={({ pageNumber, pageSize, search, signal }) => workflowCreateApi.getWarehousesPaged(pageNumber, pageSize, search, { signal })}
         getValue={(item) => String(item.depoKodu)}
         getLabel={(item) => item.depoIsmi + ' (' + String(item.depoKodu) + ')'}
         onSelect={handleWarehouseSelect}
         onClose={() => { setWarehouseTarget(null); setWarehouseSheetOpen(false); }}
       />
 
-      <SelectionSheet<ActiveUserOption>
+      <PagedSelectionSheet<ProductOption>
+        visible={stockSheetOpen}
+        title={t('workflowCreate.pickStock')}
+        placeholder={t('workflowCreate.placeholders.stockSearch')}
+        emptyText={t('workflowCreate.emptySearch')}
+        queryKey={['workflow-create', 'products-paged']}
+        fetchPage={({ pageNumber, pageSize, search, signal }) => workflowCreateApi.getProductsPaged(pageNumber, pageSize, search, { signal })}
+        getValue={(item) => item.stokKodu}
+        getLabel={(item) => item.stokAdi + ' (' + item.stokKodu + ')'}
+        onSelect={toggleStockItem}
+        onClose={() => setStockSheetOpen(false)}
+      />
+
+      <PagedSelectionSheet<YapKodOption>
+        visible={yapKodSheetOpen}
+        title={t('workflowCreate.fields.configCode')}
+        placeholder={t('workflowCreate.fields.configCode')}
+        emptyText={t('workflowCreate.emptySearch')}
+        queryKey={['workflow-create', 'yapkod-paged', yapKodTargetItem?.stockId ?? yapKodTargetItem?.stockCode ?? 'none']}
+        fetchPage={({ pageNumber, pageSize, search, signal }) =>
+          workflowCreateApi.getYapKodlarPaged(
+            pageNumber,
+            pageSize,
+            search,
+            { stockId: yapKodTargetItem?.stockId, stockCode: yapKodTargetItem?.stockCode },
+            { signal },
+          )
+        }
+        getValue={(item) => item.yapKod}
+        getLabel={(item) => item.yapAcik ? item.yapAcik + ' (' + item.yapKod + ')' : item.yapKod}
+        onSelect={(item) => {
+          if (!yapKodTargetItemId) return;
+          updateSelectedItem(yapKodTargetItemId, {
+            configCode: item.yapKod,
+            yapKod: item.yapKod,
+            yapKodId: item.id,
+          });
+        }}
+        onClose={() => {
+          setYapKodTargetItemId(null);
+          setYapKodSheetOpen(false);
+        }}
+      />
+
+      <PagedSelectionSheet<ActiveUserOption>
         visible={userSheetOpen}
         title={t('workflowCreate.fields.users')}
         placeholder={t('workflowCreate.placeholders.userSearch')}
         emptyText={t('workflowCreate.emptySearch')}
-        items={users}
+        selectedValue={undefined}
+        queryKey={['workflow-create', 'users-paged']}
+        fetchPage={({ pageNumber, pageSize, search, signal }) => workflowCreateApi.getActiveUsersPaged(pageNumber, pageSize, search, { signal })}
         getValue={(item) => String(item.id)}
         getLabel={(item) => item.fullName || item.username}
         onSelect={toggleUser}

@@ -2,8 +2,8 @@ import i18next from 'i18next';
 import { apiClient } from '@/lib/axios';
 import { barcodeApi } from '@/services/barcode-api';
 import type { ApiRequestOptions } from '@/lib/request-utils';
-import { buildPagedRequest } from '@/lib/paged';
-import type { ApiResponse, PagedResponse } from '@/types/paged';
+import { buildPagedRequest, createPagedResponse } from '@/lib/paged';
+import type { ApiResponse, PagedFilter, PagedResponse } from '@/types/paged';
 import { useAuthStore } from '@/store/auth';
 import type {
   ActiveUserOption,
@@ -41,9 +41,26 @@ function requireData<T>(response: ApiResponse<T>, fallbackKey: string): T {
   throw new Error(response.message || i18next.t(fallbackKey));
 }
 
-async function getErpPagedData<T>(url: string, fallbackKey: string, options?: ApiRequestOptions): Promise<T[]> {
+async function getServerPagedData<T>(url: string, fallbackKey: string, options?: ApiRequestOptions): Promise<T[]> {
   const response = await apiClient.post<ApiResponse<PagedResponse<T>>>(url, buildPagedRequest({ pageNumber: 1, pageSize: 1000 }), options);
   return requireData(response.data, fallbackKey).data;
+}
+
+async function getServerPagedResponse<T>(
+  url: string,
+  fallbackKey: string,
+  pageNumber: number,
+  pageSize: number,
+  search: string,
+  options?: ApiRequestOptions,
+  filters?: PagedFilter[],
+): Promise<PagedResponse<T>> {
+  const response = await apiClient.post<ApiResponse<PagedResponse<T>>>(
+    url,
+    buildPagedRequest({ pageNumber, pageSize, search, filters }),
+    options,
+  );
+  return requireData(response.data, fallbackKey);
 }
 
 function buildTransferRequest(
@@ -680,8 +697,30 @@ function resolveFreeCreateEndpoint(moduleKey: WorkflowCreateModuleMeta['key']) {
 }
 
 export const workflowCreateApi = {
+  async getCustomersPaged(
+    pageNumber: number,
+    pageSize: number,
+    search: string,
+    options?: ApiRequestOptions,
+  ): Promise<PagedResponse<CustomerOption>> {
+    const response = await getServerPagedResponse<{
+      id: number;
+      customerCode: string;
+      customerName: string;
+    }>('/api/Customer/paged', 'workflowCreate.errors.customerLoad', pageNumber, pageSize, search, options);
+
+    return {
+      ...response,
+      data: (response.data ?? []).map((customer) => ({
+        id: customer.id,
+        cariKod: customer.customerCode,
+        cariIsim: customer.customerName,
+      })),
+    };
+  },
+
   async getCustomers(options?: ApiRequestOptions): Promise<CustomerOption[]> {
-    const customers = await getErpPagedData<{
+    const customers = await getServerPagedData<{
       id: number;
       customerCode: string;
       customerName: string;
@@ -694,10 +733,32 @@ export const workflowCreateApi = {
     }));
   },
   async getProjects(options?: ApiRequestOptions): Promise<ProjectOption[]> {
-    return getErpPagedData<ProjectOption>('/api/Erp/projects/paged', 'workflowCreate.errors.projectLoad', options);
+    return getServerPagedData<ProjectOption>('/api/Erp/projects/paged', 'workflowCreate.errors.projectLoad', options);
   },
+  async getWarehousesPaged(
+    pageNumber: number,
+    pageSize: number,
+    search: string,
+    options?: ApiRequestOptions,
+  ): Promise<PagedResponse<WarehouseOption>> {
+    const response = await getServerPagedResponse<{
+      id: number;
+      warehouseCode: number;
+      warehouseName: string;
+    }>('/api/Warehouse/paged', 'workflowCreate.errors.warehouseLoad', pageNumber, pageSize, search, options);
+
+    return {
+      ...response,
+      data: (response.data ?? []).map((warehouse) => ({
+        id: warehouse.id,
+        depoKodu: warehouse.warehouseCode,
+        depoIsmi: warehouse.warehouseName,
+      })),
+    };
+  },
+
   async getWarehouses(options?: ApiRequestOptions): Promise<WarehouseOption[]> {
-    const warehouses = await getErpPagedData<{
+    const warehouses = await getServerPagedData<{
       id: number;
       warehouseCode: number;
       warehouseName: string;
@@ -710,7 +771,7 @@ export const workflowCreateApi = {
     }));
   },
   async getProducts(options?: ApiRequestOptions): Promise<ProductOption[]> {
-    const products = await getErpPagedData<{
+    const products = await getServerPagedData<{
       id: number;
       erpStockCode: string;
       stockName: string;
@@ -724,8 +785,32 @@ export const workflowCreateApi = {
       olcuBr1: product.unit || '',
     }));
   },
+  async getProductsPaged(
+    pageNumber: number,
+    pageSize: number,
+    search: string,
+    options?: ApiRequestOptions,
+  ): Promise<PagedResponse<ProductOption>> {
+    const response = await getServerPagedResponse<{
+      id: number;
+      erpStockCode: string;
+      stockName: string;
+      unit?: string | null;
+    }>('/api/Stock/paged', 'workflowCreate.errors.productLoad', pageNumber, pageSize, search, options);
+
+    return {
+      ...response,
+      data: (response.data ?? []).map((product) => ({
+        id: product.id,
+        stokKodu: product.erpStockCode,
+        stokAdi: product.stockName,
+        olcuBr1: product.unit || '',
+      })),
+    };
+  },
+
   async getYapKodlar(options?: ApiRequestOptions): Promise<YapKodOption[]> {
-    const items = await getErpPagedData<{
+    const items = await getServerPagedData<{
       id: number;
       yapKod: string;
       yapAcik: string;
@@ -738,6 +823,84 @@ export const workflowCreateApi = {
       yapAcik: item.yapAcik,
       yplndrStokKod: item.yplndrStokKod || undefined,
     }));
+  },
+  async getYapKodlarPaged(
+    pageNumber: number,
+    pageSize: number,
+    search: string,
+    // stockCode is kept only for legacy/reference compatibility.
+    stockRef?: { stockId?: number; stockCode?: string },
+    options?: ApiRequestOptions,
+  ): Promise<PagedResponse<YapKodOption>> {
+    const response = await getServerPagedResponse<{
+      id: number;
+      yapKod: string;
+      yapAcik: string;
+      stockId?: number | null;
+      yplndrStokKod?: string | null;
+    }>(
+      '/api/YapKod/paged',
+      'workflowCreate.errors.productLoad',
+      pageNumber,
+      pageSize,
+      search,
+      options,
+      stockRef?.stockId
+        ? [{ column: 'StockId', operator: 'Equals', value: String(stockRef.stockId) }]
+        : undefined,
+    );
+
+    return {
+      ...response,
+      data: (response.data ?? []).map((item) => ({
+          id: item.id,
+          yapKod: item.yapKod,
+          yapAcik: item.yapAcik,
+          stockId: item.stockId ?? undefined,
+          yplndrStokKod: item.yplndrStokKod || undefined,
+        })),
+    };
+  },
+  async getActiveUsersPaged(
+    pageNumber: number,
+    pageSize: number,
+    search: string,
+    options?: ApiRequestOptions,
+  ): Promise<PagedResponse<ActiveUserOption>> {
+    const response = await apiClient.post<ApiResponse<PagedResponse<{
+      id: number;
+      username: string;
+      email: string;
+      firstName?: string | null;
+      lastName?: string | null;
+      fullName?: string | null;
+      isActive: boolean;
+    }>>>(
+      '/api/User/paged',
+      buildPagedRequest(
+        {
+          pageNumber,
+          pageSize,
+          search,
+          filters: [{ column: 'IsActive', operator: 'Equals', value: 'true' }],
+        },
+        { sortBy: 'Id', sortDirection: 'desc' },
+      ),
+      options,
+    );
+    const paged = requireData(response.data, 'workflowCreate.errors.userLoad');
+
+    return {
+      ...paged,
+      data: (paged.data ?? []).map((user) => ({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName ?? null,
+        lastName: user.lastName ?? null,
+        fullName: user.fullName?.trim() || [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username,
+      })),
+    };
   },
   async getStokBarcode(barcode: string, options?: ApiRequestOptions): Promise<ProductBarcodeOption[]> {
     const resolved = await barcodeApi.resolve('product-lookup', barcode, options);
@@ -760,6 +923,29 @@ export const workflowCreateApi = {
     const endpoints = resolveOrderEndpoints(moduleKey);
     const response = await apiClient.get<ApiResponse<WorkflowOrder[]>>(`${endpoints.headers}/${customerCode}`, options);
     return requireData(response.data, 'workflowCreate.errors.orderLoad');
+  },
+  async getOrdersByCustomerClientSliced(
+    moduleKey: WorkflowCreateModuleMeta['key'],
+    customerCode: string,
+    pageNumber: number,
+    pageSize: number,
+    search: string,
+    options?: ApiRequestOptions,
+  ): Promise<PagedResponse<WorkflowOrder>> {
+    const items = await this.getOrdersByCustomer(moduleKey, customerCode, options);
+    const normalizedSearch = search.trim();
+    const filtered = normalizedSearch.length === 0
+      ? items
+      : items.filter((item) =>
+          `${item.siparisNo} ${item.customerCode || ''} ${item.customerName || ''} ${item.projectCode || ''}`
+            .toLocaleLowerCase('tr-TR')
+            .includes(normalizedSearch.toLocaleLowerCase('tr-TR')),
+        );
+
+    return createPagedResponse(
+      filtered,
+      buildPagedRequest({ pageNumber, pageSize, search }, { sortBy: 'siparisNo', sortDirection: 'desc' }),
+    );
   },
   async getOrderItems(moduleKey: WorkflowCreateModuleMeta['key'], orderNumbersCsv: string, options?: ApiRequestOptions): Promise<WorkflowOrderItem[]> {
     const endpoints = resolveOrderEndpoints(moduleKey);

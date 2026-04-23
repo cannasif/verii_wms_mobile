@@ -16,6 +16,7 @@ export function WorkflowSelectedItemCard({
   onRemove,
   onUpdate,
   onPickWarehouse,
+  onPickYapKod,
 }: {
   item: SelectedWorkflowOrderItem | SelectedWorkflowStockItem;
   mode: 'order' | 'free';
@@ -25,6 +26,7 @@ export function WorkflowSelectedItemCard({
   onRemove: () => void;
   onUpdate: (updates: Partial<SelectedWorkflowOrderItem & SelectedWorkflowStockItem>) => void;
   onPickWarehouse: () => void;
+  onPickYapKod: () => void;
 }): React.ReactElement {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -78,7 +80,10 @@ export function WorkflowSelectedItemCard({
         <TextInput style={[styles.input, styles.inlineInput, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceStrong, color: theme.colors.text }]} value={item.lotNo || ''} onChangeText={(value) => onUpdate({ lotNo: value })} placeholder={t('workflowCreate.fields.lotNo')} placeholderTextColor={theme.colors.inputPlaceholder} />
         <TextInput style={[styles.input, styles.inlineInput, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceStrong, color: theme.colors.text }]} value={item.batchNo || ''} onChangeText={(value) => onUpdate({ batchNo: value })} placeholder={t('workflowCreate.fields.batchNo')} placeholderTextColor={theme.colors.inputPlaceholder} />
       </View>
-      <TextInput style={[styles.input, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceStrong, color: theme.colors.text }]} value={item.configCode || ''} onChangeText={(value) => onUpdate({ configCode: value })} placeholder={t('workflowCreate.fields.configCode')} placeholderTextColor={theme.colors.inputPlaceholder} />
+      <SelectorField
+        value={item.configCode || t('workflowCreate.fields.configCode')}
+        onPress={onPickYapKod}
+      />
     </View>
   );
 }

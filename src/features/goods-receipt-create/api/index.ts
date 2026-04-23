@@ -1,7 +1,7 @@
 import { apiClient } from '@/lib/axios';
 import type { ApiRequestOptions } from '@/lib/request-utils';
-import { buildPagedRequest } from '@/lib/paged';
-import type { ApiResponse, PagedResponse } from '@/types/paged';
+import { buildPagedRequest, createPagedResponse } from '@/lib/paged';
+import type { ApiResponse, PagedFilter, PagedResponse } from '@/types/paged';
 import type {
   Customer,
   GenerateGoodsReceiptOrderRequest,
@@ -171,12 +171,33 @@ function buildGoodsReceiptProcessRequest(
 }
 
 
-async function getErpPagedData<T>(url: string, options?: ApiRequestOptions): Promise<T[]> {
+async function getServerPagedData<T>(url: string, options?: ApiRequestOptions): Promise<T[]> {
   const response = await apiClient.post<ApiResponse<PagedResponse<T>>>(url, buildPagedRequest({ pageNumber: 1, pageSize: 1000 }), options);
   if (!response.data.success || !response.data.data) {
     throw new Error(response.data.message || 'ERP verisi alınamadı.');
   }
   return response.data.data.data;
+}
+
+async function getServerPagedResponse<T>(
+  url: string,
+  pageNumber: number,
+  pageSize: number,
+  search: string,
+  options?: ApiRequestOptions,
+  filters?: PagedFilter[],
+): Promise<PagedResponse<T>> {
+  const response = await apiClient.post<ApiResponse<PagedResponse<T>>>(
+    url,
+    buildPagedRequest({ pageNumber, pageSize, search, filters }),
+    options,
+  );
+
+  if (!response.data.success || !response.data.data) {
+    throw new Error(response.data.message || 'ERP verisi alınamadı.');
+  }
+
+  return response.data.data;
 }
 
 interface WmsCustomerLookupDto {
@@ -202,12 +223,36 @@ interface WmsYapKodLookupDto {
   id: number;
   yapKod: string;
   yapAcik: string;
+  stockId?: number | null;
   yplndrStokKod?: string | null;
 }
 
+interface YapKodStockRef {
+  stockId?: number;
+  // Legacy reference only. Filtering should now be driven by stockId.
+  stockCode?: string;
+}
+
 export const goodsReceiptCreateApi = {
+  async getCustomersPaged(
+    pageNumber: number,
+    pageSize: number,
+    search: string,
+    options?: ApiRequestOptions,
+  ): Promise<PagedResponse<Customer>> {
+    const response = await getServerPagedResponse<WmsCustomerLookupDto>('/api/Customer/paged', pageNumber, pageSize, search, options);
+    return {
+      ...response,
+      data: (response.data ?? []).map((customer) => ({
+        id: customer.id,
+        cariKod: customer.customerCode,
+        cariIsim: customer.customerName,
+      })),
+    };
+  },
+
   async getCustomers(options?: ApiRequestOptions): Promise<Customer[]> {
-    const customers = await getErpPagedData<WmsCustomerLookupDto>('/api/Customer/paged', options);
+      const customers = await getServerPagedData<WmsCustomerLookupDto>('/api/Customer/paged', options);
     return customers.map((customer) => ({
       id: customer.id,
       cariKod: customer.customerCode,
@@ -216,11 +261,11 @@ export const goodsReceiptCreateApi = {
   },
 
   async getProjects(options?: ApiRequestOptions): Promise<Project[]> {
-    return getErpPagedData<Project>('/api/Erp/projects/paged', options);
+    return getServerPagedData<Project>('/api/Erp/projects/paged', options);
   },
 
   async getWarehouses(options?: ApiRequestOptions): Promise<Warehouse[]> {
-    const warehouses = await getErpPagedData<WmsWarehouseLookupDto>('/api/Warehouse/paged', options);
+    const warehouses = await getServerPagedData<WmsWarehouseLookupDto>('/api/Warehouse/paged', options);
     return warehouses.map((warehouse) => ({
       id: warehouse.id,
       depoKodu: warehouse.warehouseCode,
@@ -228,8 +273,25 @@ export const goodsReceiptCreateApi = {
     }));
   },
 
+  async getWarehousesPaged(
+    pageNumber: number,
+    pageSize: number,
+    search: string,
+    options?: ApiRequestOptions,
+  ): Promise<PagedResponse<Warehouse>> {
+    const response = await getServerPagedResponse<WmsWarehouseLookupDto>('/api/Warehouse/paged', pageNumber, pageSize, search, options);
+    return {
+      ...response,
+      data: (response.data ?? []).map((warehouse) => ({
+        id: warehouse.id,
+        depoKodu: warehouse.warehouseCode,
+        depoIsmi: warehouse.warehouseName,
+      })),
+    };
+  },
+
   async getProducts(options?: ApiRequestOptions): Promise<Product[]> {
-    const products = await getErpPagedData<WmsStockLookupDto>('/api/Stock/paged', options);
+    const products = await getServerPagedData<WmsStockLookupDto>('/api/Stock/paged', options);
     return products.map((product) => ({
       id: product.id,
       stokKodu: product.erpStockCode,
@@ -238,14 +300,62 @@ export const goodsReceiptCreateApi = {
     }));
   },
 
+  async getProductsPaged(
+    pageNumber: number,
+    pageSize: number,
+    search: string,
+    options?: ApiRequestOptions,
+  ): Promise<PagedResponse<Product>> {
+    const response = await getServerPagedResponse<WmsStockLookupDto>('/api/Stock/paged', pageNumber, pageSize, search, options);
+    return {
+      ...response,
+      data: (response.data ?? []).map((product) => ({
+        id: product.id,
+        stokKodu: product.erpStockCode,
+        stokAdi: product.stockName,
+        olcuBr1: product.unit || '',
+      })),
+    };
+  },
+
   async getYapKodlar(options?: ApiRequestOptions): Promise<YapKodOption[]> {
-    const items = await getErpPagedData<WmsYapKodLookupDto>('/api/YapKod/paged', options);
+    const items = await getServerPagedData<WmsYapKodLookupDto>('/api/YapKod/paged', options);
     return items.map((item) => ({
       id: item.id,
       yapKod: item.yapKod,
       yapAcik: item.yapAcik,
+      stockId: item.stockId ?? undefined,
       yplndrStokKod: item.yplndrStokKod || undefined,
     }));
+  },
+
+  async getYapKodlarPaged(
+    pageNumber: number,
+    pageSize: number,
+    search: string,
+    stockRef?: YapKodStockRef,
+    options?: ApiRequestOptions,
+  ): Promise<PagedResponse<YapKodOption>> {
+    const response = await getServerPagedResponse<WmsYapKodLookupDto>(
+      '/api/YapKod/paged',
+      pageNumber,
+      pageSize,
+      search,
+      options,
+      stockRef?.stockId
+        ? [{ column: 'StockId', operator: 'Equals', value: String(stockRef.stockId) }]
+        : undefined,
+    );
+    return {
+      ...response,
+      data: (response.data ?? []).map((item) => ({
+          id: item.id,
+          yapKod: item.yapKod,
+          yapAcik: item.yapAcik,
+          stockId: item.stockId ?? undefined,
+          yplndrStokKod: item.yplndrStokKod || undefined,
+        })),
+    };
   },
 
   async getOrdersByCustomer(customerCode: string, options?: ApiRequestOptions): Promise<Order[]> {
@@ -254,6 +364,29 @@ export const goodsReceiptCreateApi = {
       throw new Error(response.data.message || 'Sipariş listesi alınamadı.');
     }
     return response.data.data;
+  },
+
+  async getOrdersByCustomerClientSliced(
+    customerCode: string,
+    pageNumber: number,
+    pageSize: number,
+    search: string,
+    options?: ApiRequestOptions,
+  ): Promise<PagedResponse<Order>> {
+    const items = await this.getOrdersByCustomer(customerCode, options);
+    const normalizedSearch = search.trim();
+    const filtered = normalizedSearch.length === 0
+      ? items
+      : items.filter((item) =>
+          `${item.siparisNo} ${item.customerCode || ''} ${item.customerName || ''} ${item.projectCode || ''}`
+            .toLocaleLowerCase('tr-TR')
+            .includes(normalizedSearch.toLocaleLowerCase('tr-TR')),
+        );
+
+    return createPagedResponse(
+      filtered,
+      buildPagedRequest({ pageNumber, pageSize, search }, { sortBy: 'siparisNo', sortDirection: 'desc' }),
+    );
   },
 
   async getOrderItems(customerCode: string, orderNumbersCsv: string, options?: ApiRequestOptions): Promise<OrderItem[]> {

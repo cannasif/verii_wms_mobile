@@ -47,6 +47,7 @@ export interface YapKodOption {
   id: number;
   yapKod: string;
   yapAcik: string;
+  stockId?: number;
   yplndrStokKod?: string;
 }
 

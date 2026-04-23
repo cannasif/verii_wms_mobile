@@ -563,6 +563,7 @@
     "notes": "Notlar",
     "notesPlaceholder": "Açıklama veya not ekleyin",
     "ordersTab": "Siparişler",
+    "pickOrder": "Sipariş Seç",
     "itemsTab": "Sipariş içeriği",
     "stocksTab": "Stoklar",
     "selectedTab": "Seçilenler",
@@ -573,6 +574,7 @@
     "searchCustomers": "Müşteri ara",
     "searchProjects": "Proje ara",
     "searchWarehouses": "Depo ara",
+    "searchYapKod": "Yapkod ara",
     "emptySearch": "Kayıt bulunamadı.",
     "orderDate": "Siparis tarihi: {{value}}",
     "remainingForImport": "Kalan kabul miktarı: {{value}}",
@@ -585,7 +587,9 @@
     "customerSelectTitle": "Müşteri seç",
     "projectSelectTitle": "Proje seç",
     "warehouseSelectTitle": "Depo seç",
+    "pickStock": "Stok seç",
     "warehousePlaceholder": "Depo seçin",
+    "searchPagedHint": "İlk 20 kayıt yüklenir, arama ve kaydırma ile devam eder.",
     "quantityPlaceholder": "Miktar girin",
     "baseQuantity": "Beklenen miktar: {{value}} {{unit}}",
     "serialNo": "Seri no",
@@ -766,7 +770,10 @@
     "noItems": "Seçilen sipariş için kalem bulunamadı.",
     "noStocks": "Stok listesi alınamadı veya boş döndü.",
     "noOrderSelected": "Kalemleri görmek için önce bir sipariş seçin.",
+    "pickOrder": "Sipariş Seç",
     "noCustomerSelected": "Siparişleri görmek için önce müşteri seçin.",
+    "pickStock": "Stok Seç",
+    "searchPagedHint": "İlk 20 kayıt yüklenir, arama ve kaydırma ile devam eder.",
     "remainingQty": "Kalan miktar: {{value}}",
     "fields": {
       "transferDate": "Transfer Tarihi",
@@ -799,9 +806,11 @@
       "quantity": "Miktar girin",
       "itemSourceWarehouse": "Kalem kaynak deposunu seçin",
       "customerSearch": "Müşteri ara",
+      "orderSearch": "Sipariş no ara",
       "projectSearch": "Proje ara",
       "warehouseSearch": "Depo ara",
-      "userSearch": "Kullanıcı ara"
+      "userSearch": "Kullanıcı ara",
+      "stockSearch": "Stok ara"
     },
     "validation": {
       "baseFields": "Tarih ve belge no zorunludur.",
@@ -829,5 +838,117 @@
       "createFailed": "Belge oluşturulamadı."
     },
     "barcodeValue": "Barkod: {{value}}"
+  },
+  "inventoryMobile": {
+    "stock": {
+      "title": "Depo Stok Bakiyesi",
+      "subtitle": "Depo bazında stok kümüle bakiyesini mobilde inceleyin.",
+      "heroTitle": "Anlık depo stok görünümü",
+      "heroText": "{{count}} bakiye kaydı arama ve filtre ile yönetiliyor.",
+      "emptyTitle": "Stok bakiyesi bulunamadı",
+      "emptyDescription": "Aramayı veya filtreleri sıfırlayıp tekrar deneyin.",
+      "errorTitle": "Stok bakiyesi alınamadı",
+      "loadFailed": "Depo stok bakiyesi alınamadı."
+    },
+    "serial": {
+      "title": "Depo Seri Bakiyesi",
+      "subtitle": "Seri, raf ve depo detayını mobilde takip edin.",
+      "heroTitle": "Seri ve raf görünürlüğü",
+      "heroText": "{{count}} seri bakiyesi kaydı hızlı listeleme ile hazır.",
+      "emptyTitle": "Seri bakiyesi bulunamadı",
+      "emptyDescription": "Filtreleri güncelleyip seri kayıtlarını tekrar yükleyin.",
+      "errorTitle": "Seri bakiyesi alınamadı",
+      "loadFailed": "Depo seri bakiyesi alınamadı."
+    },
+    "labels": {
+      "warehouse": "Depo",
+      "yapKod": "Yapkod",
+      "available": "Kullanılabilir",
+      "serialCount": "Seri Sayısı",
+      "shelfCount": "Raf Sayısı",
+      "lastTxn": "Son Hareket",
+      "shelf": "Raf",
+      "serialNo2": "Seri 2",
+      "serialNo3": "Seri 3"
+    },
+    "filters": {
+      "stockCode": "Stok Kodu",
+      "stockName": "Stok Adı",
+      "warehouse": "Depo",
+      "yapKod": "Yapkod",
+      "shelf": "Raf",
+      "serialNo": "Seri No"
+    }
+  },
+  "packageMobile": {
+    "list": {
+      "title": "Paketler",
+      "subtitle": "Koli, palet ve paketleme işlerini mobilde görüntüleyin.",
+      "heroTitle": "Paket ağacı mobilde hazır",
+      "heroText": "{{count}} paketleme işi filtrelenebilir listede sunuluyor.",
+      "emptyTitle": "Paket kaydı bulunamadı",
+      "emptyDescription": "Arama ve filtreleri güncelleyip listeyi tekrar deneyin.",
+      "errorTitle": "Paket listesi alınamadı",
+      "loadFailed": "Paket listesi alınamadı.",
+      "openTree": "Ağacı aç"
+    },
+    "detail": {
+      "title": "Paket Detayı",
+      "subtitle": "Header özeti ve package tree mobil görünümü.",
+      "heroTitle": "Paket hiyerarşisi görünür",
+      "heroText": "Palet, koli ve alt paketleri aynı akışta izleyin.",
+      "summaryTitle": "Header Özeti",
+      "treeTitle": "Package Tree",
+      "treeSubtitle": "Parent-child paket yapısı",
+      "emptyTitle": "Paket ağacı boş",
+      "emptyDescription": "Bu header altında henüz paket bulunmuyor.",
+      "errorTitle": "Paket detayı alınamadı",
+      "loadFailed": "Paket detayı alınamadı."
+    },
+    "labels": {
+      "customer": "Müşteri",
+      "warehouse": "Depo",
+      "sourceType": "Kaynak Tipi",
+      "packingDate": "Paketleme Tarihi",
+      "packageCount": "Paket Sayısı",
+      "totalQuantity": "Toplam Miktar",
+      "totalGrossWeight": "Toplam Brüt Ağırlık",
+      "childCount": "Alt Paket",
+      "shelf": "Raf"
+    },
+    "filters": {
+      "packingNo": "Paketleme No",
+      "customerCode": "Müşteri Kodu",
+      "customerName": "Müşteri Adı",
+      "warehouse": "Depo",
+      "sourceType": "Kaynak Tipi",
+      "status": "Durum"
+    }
+  },
+  "packageMoveMobile": {
+    "title": "Paket Taşı",
+    "subtitle": "{{target}} için kaynak package tree seçin.",
+    "heroTitle": "Kaynak paketleme işini seç",
+    "heroText": "{{count}} paketleme işi mobil listede hazır.",
+    "emptyTitle": "Taşınabilir paketleme işi bulunamadı",
+    "emptyDescription": "Filtreleri değiştirip tekrar deneyin.",
+    "errorTitle": "Paket taşıma ekranı yüklenemedi",
+    "loadFailed": "Paket taşıma verisi alınamadı.",
+    "treeTitle": "Paket Seç",
+    "treeSubtitle": "{{target}} için taşınacak paketleri işaretleyin.",
+    "selectionTitle": "Paket Seçimi",
+    "selectionSubtitle": "{{count}} paket seçildi",
+    "selectAll": "Tümünü Seç",
+    "clearSelection": "Seçimi Temizle",
+    "noteTitle": "Taşıma Notu",
+    "noteSubtitle": "İsteğe bağlı açıklama ekleyin.",
+    "notePlaceholder": "Taşıma notu",
+    "moveAction": "Paketleri Taşı",
+    "moving": "Taşınıyor...",
+    "moveSuccess": "{{packageCount}} paket ve {{lineCount}} satır hedef operasyona taşındı.",
+    "moveFailed": "Paket taşıma işlemi başarısız.",
+    "cardTitle": "Package Move",
+    "cardSubtitle": "Transfer veya sevkiyat için mevcut paketleri bağlayın.",
+    "openAction": "Package Move Aç"
   }
 }

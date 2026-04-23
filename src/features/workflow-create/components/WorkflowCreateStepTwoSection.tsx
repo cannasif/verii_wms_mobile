@@ -10,7 +10,6 @@ import { COLORS, RADII, SPACING } from '@/constants/theme';
 import { useTheme } from '@/providers/ThemeProvider';
 import type { WorkflowModuleConfig } from '@/features/operations/types/workflow';
 import type {
-  ProductOption,
   SelectedWorkflowItem,
   SelectedWorkflowOrderItem,
   SelectedWorkflowStockItem,
@@ -24,9 +23,9 @@ interface Props {
   stockTab: 'stocks' | 'selected';
   setStockTab: (tab: 'stocks' | 'selected') => void;
   formCustomerId: string;
-  orders: Array<{ siparisNo: string; customerName?: string }>;
+  selectedOrder?: { siparisNo: string; customerName?: string } | null;
   activeOrderNumber: string | null;
-  setActiveOrderNumber: (value: string) => void;
+  onOpenOrderPicker: () => void;
   orderItems: WorkflowOrderItem[];
   selectedItems: SelectedWorkflowItem[];
   toggleOrderItem: (item: WorkflowOrderItem) => void;
@@ -38,13 +37,7 @@ interface Props {
   scannerOpen: boolean;
   handleBarcodeScanned: ({ data }: { data: string }) => void;
   closeScanner: () => void;
-  products: ProductOption[];
-  selectedCountsByStockCode: Map<string, number>;
-  stockBatchCounts: Record<string, string>;
-  setStockBatchCounts: React.Dispatch<React.SetStateAction<Record<string, string>>>;
-  removeStockItemsByCode: (stockCode: string, count: number) => void;
-  addStockItems: (item: ProductOption, count: number) => void;
-  parseCountInput: (value: string) => number;
+  openStockPicker: () => void;
   quantityInputs: Record<string, string>;
   handleQuantityInputChange: (itemId: string, value: string) => void;
   handleQuantityBlur: (itemId: string, fallbackQuantity: number) => void;
@@ -52,6 +45,7 @@ interface Props {
   updateSelectedItem: (itemId: string, updates: Partial<SelectedWorkflowOrderItem & SelectedWorkflowStockItem>) => void;
   setWarehouseTarget: (target: string | 'source' | 'target' | null) => void;
   setWarehouseSheetOpen: (open: boolean) => void;
+  openYapKodPicker: (itemId: string) => void;
   isOrderItem: (item: SelectedWorkflowItem) => item is SelectedWorkflowOrderItem;
   isStockItem: (item: SelectedWorkflowItem) => item is SelectedWorkflowStockItem;
 }
@@ -66,23 +60,26 @@ export function WorkflowCreateStepTwoSection(props: Props): React.ReactElement {
         <>
           {props.formCustomerId ? (
             <>
-              {props.orders.map((order) => (
+              <View style={styles.barcodeCard}>
+                <Button title={t('workflowCreate.pickOrder')} onPress={props.onOpenOrderPicker} />
+                <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>{t('workflowCreate.searchPagedHint')}</Text>
+              </View>
+              {props.selectedOrder ? (
                 <Pressable
-                  key={order.siparisNo}
                   style={[
                     styles.rowCard,
                     {
                       borderColor: theme.colors.border,
                       backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.02)' : 'rgba(255,255,255,0.03)',
                     },
-                    props.activeOrderNumber === order.siparisNo ? [styles.rowCardActive, { borderColor: theme.colors.primary }] : null,
+                    props.activeOrderNumber === props.selectedOrder.siparisNo ? [styles.rowCardActive, { borderColor: theme.colors.primary }] : null,
                   ]}
-                  onPress={() => props.setActiveOrderNumber(order.siparisNo)}
+                  onPress={props.onOpenOrderPicker}
                 >
-                  <Text style={styles.rowTitle}>{order.siparisNo}</Text>
-                  <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>{order.customerName}</Text>
+                  <Text style={styles.rowTitle}>{props.selectedOrder.siparisNo}</Text>
+                  <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>{props.selectedOrder.customerName}</Text>
                 </Pressable>
-              ))}
+              ) : null}
               {props.activeOrderNumber ? props.orderItems.map((item) => {
                 const selected = props.selectedItems.some((selectedItem) => props.isOrderItem(selectedItem) && selectedItem.id === item.id);
                 return (
@@ -150,51 +147,12 @@ export function WorkflowCreateStepTwoSection(props: Props): React.ReactElement {
               <Text style={styles.modeText}>{t('goodsReceiptMobile.selectedTab')}</Text>
             </Pressable>
           </View>
-          {props.stockTab === 'stocks' ? props.products.map((item) => {
-            const selectedCount = props.selectedCountsByStockCode.get(item.stokKodu) || 0;
-            const batchCount = props.stockBatchCounts[item.stokKodu] ?? '1';
-            return (
-              <View
-                key={item.stokKodu}
-                style={[
-                  styles.rowCard,
-                  {
-                    borderColor: theme.colors.border,
-                    backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.02)' : 'rgba(255,255,255,0.03)',
-                  },
-                  selectedCount > 0 ? [styles.rowCardActive, { borderColor: theme.colors.primary }] : null,
-                ]}
-              >
-                <View style={styles.rowHeader}>
-                  <View style={styles.flexOne}>
-                    <Text style={styles.rowTitle}>{item.stokKodu}</Text>
-                    <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>{item.stokAdi}</Text>
-                  </View>
-                  {selectedCount > 0 ? (
-                    <View style={styles.countBadge}>
-                      <Text style={[styles.countBadgeText, { color: theme.colors.background }]}>{String(selectedCount)}</Text>
-                    </View>
-                  ) : null}
-                </View>
-                <View style={styles.stockAdjustRow}>
-                  <Pressable style={[styles.countActionButton, { backgroundColor: theme.colors.card }, selectedCount === 0 ? styles.countActionButtonDisabled : null]} onPress={() => props.removeStockItemsByCode(item.stokKodu, props.parseCountInput(batchCount))} disabled={selectedCount === 0}>
-                    <Text style={[styles.countActionText, { color: theme.colors.text }]}>-</Text>
-                  </Pressable>
-                  <TextInput
-                    style={[styles.countInput, { backgroundColor: theme.colors.surfaceStrong, color: theme.colors.text }]}
-                    value={batchCount}
-                    onChangeText={(value) => props.setStockBatchCounts((prev) => ({ ...prev, [item.stokKodu]: value.replace(/[^0-9]/g, '') || '' }))}
-                    keyboardType='number-pad'
-                    placeholder='1'
-                    placeholderTextColor={theme.colors.inputPlaceholder}
-                  />
-                  <Pressable style={styles.countActionButton} onPress={() => props.addStockItems(item, props.parseCountInput(batchCount))}>
-                    <Text style={[styles.countActionText, { color: theme.colors.text }]}>+</Text>
-                  </Pressable>
-                </View>
-              </View>
-            );
-          }) : (props.selectedItems.filter(props.isStockItem).length === 0 ? <ScreenState tone='empty' title={t('goodsReceiptMobile.emptySelectedText')} compact /> : null)}
+          {props.stockTab === 'stocks' ? (
+            <View style={styles.barcodeCard}>
+              <Button title={t('workflowCreate.pickStock')} onPress={props.openStockPicker} />
+              <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>{t('workflowCreate.searchPagedHint')}</Text>
+            </View>
+          ) : (props.selectedItems.filter(props.isStockItem).length === 0 ? <ScreenState tone='empty' title={t('goodsReceiptMobile.emptySelectedText')} compact /> : null)}
         </>
       )}
 
@@ -213,6 +171,7 @@ export function WorkflowCreateStepTwoSection(props: Props): React.ReactElement {
             props.setWarehouseTarget(item.id);
             props.setWarehouseSheetOpen(true);
           }}
+          onPickYapKod={() => props.openYapKodPicker(item.id)}
         />
       ))}
     </FormSection>

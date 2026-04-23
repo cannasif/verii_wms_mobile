@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { SelectorField } from '@/components/ui/SelectorField';
 import { Text } from '@/components/ui/Text';
 import { SPACING } from '@/constants/theme';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -23,6 +24,7 @@ interface LineEditorCardProps {
   onChange: (updates: Partial<SelectedOrderItem> & Partial<SelectedStockItem>) => void;
   onRemove: () => void;
   onPickWarehouse: () => void;
+  onPickYapKod?: () => void;
   selectedWarehouseLabel: string;
 }
 
@@ -37,6 +39,7 @@ export function LineEditorCard({
   onChange,
   onRemove,
   onPickWarehouse,
+  onPickYapKod,
   selectedWarehouseLabel,
 }: LineEditorCardProps): React.ReactElement {
   const { t } = useTranslation();
@@ -163,12 +166,10 @@ export function LineEditorCard({
             placeholderTextColor={theme.colors.inputPlaceholder}
             textColor={theme.colors.text}
           />
-          <DetailInput
+          <DetailSelector
             label={t('goodsReceiptMobile.configCode')}
-            value={selectedItem?.configCode || ''}
-            onChangeText={(value) => onChange({ configCode: value })}
-            placeholderTextColor={theme.colors.inputPlaceholder}
-            textColor={theme.colors.text}
+            value={selectedItem?.configCode || t('goodsReceiptMobile.configCode')}
+            onPress={onPickYapKod}
           />
         </View>
       ) : null}
@@ -199,6 +200,24 @@ function DetailInput({
         style={[styles.detailInput, { backgroundColor: theme.colors.card, borderColor: theme.colors.border, color: textColor }]}
         placeholderTextColor={placeholderTextColor}
       />
+    </View>
+  );
+}
+
+function DetailSelector({
+  label,
+  value,
+  onPress,
+}: {
+  label: string;
+  value: string;
+  onPress?: () => void;
+}): React.ReactElement {
+  const { theme } = useTheme();
+  return (
+    <View style={{ gap: SPACING.xs - 2 }}>
+      <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>{label}</Text>
+      <SelectorField value={value} onPress={onPress || (() => undefined)} />
     </View>
   );
 }

@@ -7,7 +7,7 @@
       "policy": "appVersion"
     },
     "orientation": "portrait",
-    "icon": "./assets/v3logo.png",
+    "icon": "./assets/v3logo-square.png",
     "scheme": "verii-wms-mobile",
     "userInterfaceStyle": "dark",
     "splash": {
@@ -27,11 +27,10 @@
       ],
       "package": "com.v3rii.veriiwmsmobile",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/v3logo.png",
+        "foregroundImage": "./assets/v3logo-square.png",
         "backgroundColor": "#071224"
       },
-      "edgeToEdgeEnabled": true,
-      "usesCleartextTraffic": true
+      "edgeToEdgeEnabled": true
     },
     "plugins": [
       "expo-router",

@@ -5,29 +5,26 @@ import { Text } from '@/components/ui/Text';
 import { ScreenState } from '@/components/ui/ScreenState';
 import { formatLocalizedDate } from '@/lib/formatters';
 import { useTheme } from '@/providers/ThemeProvider';
-import type { Order, OrderItem, SelectedOrderItem, Warehouse } from '../types';
+import type { Order, OrderItem, SelectedOrderItem } from '../types';
 import { LineEditorCard } from './LineEditorCard';
 import { styles } from './styles';
 
 interface Step2OrderSelectionProps {
   orderTab: 'orders' | 'items';
   setOrderTab: (tab: 'orders' | 'items') => void;
-  searchOrders: string;
-  setSearchOrders: (value: string) => void;
   searchItems: string;
   setSearchItems: (value: string) => void;
-  ordersLoading: boolean;
-  filteredOrders: Order[];
+  selectedOrder?: Order | null;
   activeOrderNumber: string | null;
-  onSelectOrder: (orderNumber: string) => void;
+  onOpenOrderPicker: () => void;
   orderItemsLoading: boolean;
   filteredOrderItems: OrderItem[];
   selectedItems: SelectedOrderItem[];
   onToggleItem: (item: OrderItem) => void;
   onUpdateItem: (itemId: string, updates: Partial<SelectedOrderItem>) => void;
   onRemoveItem: (itemId: string) => void;
-  warehouses: Warehouse[];
   onPickWarehouse: (itemId: string) => void;
+  onPickYapKod?: (itemId: string) => void;
   getWarehouseLabel: (warehouseId?: number) => string;
 }
 
@@ -54,40 +51,36 @@ export function Step2OrderSelection(props: Step2OrderSelectionProps): React.Reac
 
       {props.orderTab === 'orders' ? (
         <>
-          <TextInput
-            value={props.searchOrders}
-            onChangeText={props.setSearchOrders}
-            style={[styles.input, { backgroundColor: theme.colors.surfaceStrong, color: theme.colors.text }]}
-            placeholder={t('goodsReceiptMobile.searchOrders')}
-            placeholderTextColor={theme.colors.inputPlaceholder}
-          />
-          {props.ordersLoading ? (
-            <ScreenState tone='loading' title={t('common.loading')} compact />
-          ) : props.filteredOrders.length === 0 ? (
+          <Pressable
+            style={[styles.selectableCard, { backgroundColor: theme.colors.backgroundSecondary, borderColor: theme.colors.border }]}
+            onPress={props.onOpenOrderPicker}
+          >
+            <Text style={styles.selectableTitle}>{t('goodsReceiptMobile.pickOrder')}</Text>
+            <Text style={[styles.selectableMeta, { color: theme.colors.textSecondary }]}>{t('goodsReceiptMobile.searchPagedHint')}</Text>
+          </Pressable>
+          {!props.selectedOrder ? (
             <ScreenState
               tone='empty'
               title={t('goodsReceiptMobile.noOrderSelectedTitle')}
-              description={t('goodsReceiptMobile.searchOrders')}
+              description={t('goodsReceiptMobile.noOrderSelectedText')}
               compact
             />
           ) : (
-            props.filteredOrders.map((order) => (
-              <Pressable
-                key={order.siparisNo}
-                style={[
-                  styles.selectableCard,
-                  { backgroundColor: theme.colors.backgroundSecondary, borderColor: theme.colors.border },
-                  props.activeOrderNumber === order.siparisNo ? [styles.selectableCardActive, { borderColor: theme.colors.primary }] : null,
-                ]}
-                onPress={() => props.onSelectOrder(order.siparisNo)}
-              >
-                <Text style={styles.selectableTitle}>{order.siparisNo}</Text>
-                <Text style={[styles.selectableMeta, { color: theme.colors.textSecondary }]}>{t('goodsReceiptMobile.orderDate', { value: formatLocalizedDate(order.orderDate) })}</Text>
-                <Text style={[styles.selectableMeta, { color: theme.colors.textSecondary }]}>
-                  {t('goodsReceiptMobile.remainingForImport', { value: order.remainingForImport })}
-                </Text>
-              </Pressable>
-            ))
+            <View
+              style={[
+                styles.selectableCard,
+                { backgroundColor: theme.colors.backgroundSecondary, borderColor: theme.colors.primary },
+                props.activeOrderNumber === props.selectedOrder.siparisNo ? styles.selectableCardActive : null,
+              ]}
+            >
+              <Text style={styles.selectableTitle}>{props.selectedOrder.siparisNo}</Text>
+              <Text style={[styles.selectableMeta, { color: theme.colors.textSecondary }]}>
+                {t('goodsReceiptMobile.orderDate', { value: formatLocalizedDate(props.selectedOrder.orderDate) })}
+              </Text>
+              <Text style={[styles.selectableMeta, { color: theme.colors.textSecondary }]}>
+                {t('goodsReceiptMobile.remainingForImport', { value: props.selectedOrder.remainingForImport })}
+              </Text>
+            </View>
           )}
         </>
       ) : (
@@ -133,6 +126,7 @@ export function Step2OrderSelection(props: Step2OrderSelectionProps): React.Reac
                       onChange={(updates) => props.onUpdateItem(item.id || '', updates)}
                       onRemove={() => props.onRemoveItem(item.id || '')}
                       onPickWarehouse={() => props.onPickWarehouse(item.id || '')}
+                      onPickYapKod={() => props.onPickYapKod?.(item.id || '')}
                       selectedWarehouseLabel={props.getWarehouseLabel(selectedItem?.warehouseId)}
                     />
                   );

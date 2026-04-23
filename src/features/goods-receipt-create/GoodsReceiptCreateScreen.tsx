@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { AppDialog } from '@/components/ui/AppDialog';
 import { Button } from '@/components/ui/Button';
+import { PagedSelectionSheet } from '@/components/ui/PagedSelectionSheet';
 import { Text } from '@/components/ui/Text';
 import { normalizeError } from '@/lib/errors';
 import { showError, showWarning } from '@/lib/feedback';
@@ -19,6 +20,7 @@ import { styles } from './components/styles';
 import type {
   Customer,
   GoodsReceiptFormValues,
+  Order,
   OrderItem,
   Product,
   Project,
@@ -27,6 +29,7 @@ import type {
   SelectedReceiptItem,
   SelectedStockItem,
   Warehouse,
+  YapKodOption,
 } from './types';
 
 type StepKey = 1 | 2;
@@ -79,14 +82,17 @@ export function GoodsReceiptCreateScreen({
   const [stockTab, setStockTab] = useState<StockMobileTab>('stocks');
   const [activeOrderNumber, setActiveOrderNumber] = useState<string | null>(null);
   const [warehouseTarget, setWarehouseTarget] = useState<WarehouseTarget>(null);
+  const [showStockSheet, setShowStockSheet] = useState(false);
+  const [yapKodTargetItemId, setYapKodTargetItemId] = useState<string | null>(null);
+  const [showYapKodSheet, setShowYapKodSheet] = useState(false);
   const [showCustomerSheet, setShowCustomerSheet] = useState(false);
   const [showProjectSheet, setShowProjectSheet] = useState(false);
+  const [showOrderSheet, setShowOrderSheet] = useState(false);
   const [stepOneErrors, setStepOneErrors] = useState<{
     receiptDate?: string;
     documentNo?: string;
     customerId?: string;
   }>({});
-  const [searchOrders, setSearchOrders] = useState('');
   const [searchItems, setSearchItems] = useState('');
   const [searchStocks, setSearchStocks] = useState('');
   const [searchSelectedStocks, setSearchSelectedStocks] = useState('');
@@ -100,38 +106,23 @@ export function GoodsReceiptCreateScreen({
   });
   const [selectedItems, setSelectedItems] = useState<SelectedReceiptItem[]>([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-
-  const customersQuery = useQuery({
-    queryKey: ['goods-receipt-create', 'customers'],
-    queryFn: ({ signal }) => goodsReceiptCreateApi.getCustomers({ signal }),
-  });
+  const yapKodTargetItem = selectedItems.find((item) => item.id === yapKodTargetItemId);
 
   const projectsQuery = useQuery({
     queryKey: ['goods-receipt-create', 'projects'],
     queryFn: ({ signal }) => goodsReceiptCreateApi.getProjects({ signal }),
   });
 
-  const warehousesQuery = useQuery({
-    queryKey: ['goods-receipt-create', 'warehouses'],
-    queryFn: ({ signal }) => goodsReceiptCreateApi.getWarehouses({ signal }),
-  });
-
   const ordersQuery = useQuery({
     queryKey: ['goods-receipt-create', 'orders', form.customerId],
     queryFn: ({ signal }) => goodsReceiptCreateApi.getOrdersByCustomer(form.customerId, { signal }),
-    enabled: Boolean(form.customerId),
+    enabled: receiptMode === 'stock' && Boolean(form.customerId),
   });
 
   const orderItemsQuery = useQuery({
     queryKey: ['goods-receipt-create', 'order-items', form.customerId, activeOrderNumber],
     queryFn: ({ signal }) => goodsReceiptCreateApi.getOrderItems(form.customerId, activeOrderNumber || '', { signal }),
     enabled: receiptMode === 'order' && Boolean(form.customerId) && Boolean(activeOrderNumber),
-  });
-
-  const productsQuery = useQuery({
-    queryKey: ['goods-receipt-create', 'products'],
-    queryFn: ({ signal }) => goodsReceiptCreateApi.getProducts({ signal }),
-    enabled: receiptMode === 'stock' && Boolean(form.customerId),
   });
 
   const createMutation = useMutation({
@@ -144,11 +135,8 @@ export function GoodsReceiptCreateScreen({
     },
   });
 
-  const customers = customersQuery.data ?? [];
   const projects = projectsQuery.data ?? [];
-  const warehouses = warehousesQuery.data ?? [];
   const orders = ordersQuery.data ?? [];
-  const products = productsQuery.data ?? [];
 
   const allOrderNumbers = useMemo(() => {
     if (receiptMode !== 'stock' || orders.length === 0) {
@@ -164,7 +152,8 @@ export function GoodsReceiptCreateScreen({
     enabled: receiptMode === 'stock' && Boolean(form.customerId) && Boolean(allOrderNumbers),
   });
 
-  const selectedCustomer = customers.find((item) => item.cariKod === form.customerId) ?? null;
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const selectedProject = projects.find((item) => item.projeKod === form.projectCode) ?? null;
 
   const mappedOrderItems = useMemo(() => {
@@ -178,15 +167,6 @@ export function GoodsReceiptCreateScreen({
     }));
   }, [orderItemsQuery.data]);
 
-  const filteredOrders = useMemo(() => {
-    if (!searchOrders.trim()) {
-      return orders;
-    }
-
-    const query = searchOrders.toLocaleLowerCase('tr-TR');
-    return orders.filter((item) => item.siparisNo.toLocaleLowerCase('tr-TR').includes(query));
-  }, [orders, searchOrders]);
-
   const filteredOrderItems = useMemo(() => {
     if (!searchItems.trim()) {
       return mappedOrderItems;
@@ -197,17 +177,6 @@ export function GoodsReceiptCreateScreen({
       `${item.productCode} ${item.productName}`.toLocaleLowerCase('tr-TR').includes(query),
     );
   }, [mappedOrderItems, searchItems]);
-
-  const filteredProducts = useMemo(() => {
-    if (!searchStocks.trim()) {
-      return products;
-    }
-
-    const query = searchStocks.toLocaleLowerCase('tr-TR');
-    return products.filter((item) =>
-      `${item.stokKodu} ${item.stokAdi}`.toLocaleLowerCase('tr-TR').includes(query),
-    );
-  }, [products, searchStocks]);
 
   const filteredSelectedStocks = useMemo(() => {
     const stockItems = selectedItems.filter(isSelectedStockItem);
@@ -231,16 +200,6 @@ export function GoodsReceiptCreateScreen({
 
     return quantities;
   }, [allOrderItemsQuery.data]);
-
-  const selectedStockCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-
-    selectedItems.filter(isSelectedStockItem).forEach((item) => {
-      counts.set(item.stockCode, (counts.get(item.stockCode) || 0) + 1);
-    });
-
-    return counts;
-  }, [selectedItems]);
 
   const setFormValue = <K extends keyof GoodsReceiptFormValues>(key: K, value: GoodsReceiptFormValues[K]): void => {
     if (key === 'receiptDate' || key === 'documentNo' || key === 'customerId') {
@@ -273,10 +232,10 @@ export function GoodsReceiptCreateScreen({
     setOrderTab('orders');
     setStockTab('stocks');
     setWarehouseTarget(null);
-    setSearchOrders('');
     setSearchItems('');
     setSearchStocks('');
     setSearchSelectedStocks('');
+    setSelectedOrder(null);
   };
 
   const selectMode = (mode: ReceiptMode): void => {
@@ -501,26 +460,23 @@ export function GoodsReceiptCreateScreen({
         <Step2OrderSelection
           orderTab={orderTab}
           setOrderTab={setOrderTab}
-          searchOrders={searchOrders}
-          setSearchOrders={setSearchOrders}
           searchItems={searchItems}
           setSearchItems={setSearchItems}
-          ordersLoading={ordersQuery.isLoading}
-          filteredOrders={filteredOrders}
+          selectedOrder={selectedOrder}
           activeOrderNumber={activeOrderNumber}
-          onSelectOrder={(orderNumber) => {
-            setActiveOrderNumber(orderNumber);
-            setOrderTab('items');
-          }}
+          onOpenOrderPicker={() => setShowOrderSheet(true)}
           orderItemsLoading={orderItemsQuery.isLoading}
           filteredOrderItems={filteredOrderItems}
           selectedItems={selectedItems.filter(isSelectedOrderItem)}
           onToggleItem={toggleOrderItem}
           onUpdateItem={updateOrderItem}
           onRemoveItem={removeOrderItem}
-          warehouses={warehouses}
           onPickWarehouse={(itemId) => setWarehouseTarget({ kind: 'order', itemId })}
-          getWarehouseLabel={(warehouseId) => getWarehouseLabel(warehouses, warehouseId, t('goodsReceiptMobile.warehousePlaceholder'))}
+          onPickYapKod={(itemId) => {
+            setYapKodTargetItemId(itemId);
+            setShowYapKodSheet(true);
+          }}
+          getWarehouseLabel={(warehouseId) => getWarehouseLabel(undefined, warehouseId, t('goodsReceiptMobile.warehousePlaceholder'))}
         />
       ) : (
         <Step2StockSelection
@@ -530,18 +486,17 @@ export function GoodsReceiptCreateScreen({
           setSearchStocks={setSearchStocks}
           searchSelectedStocks={searchSelectedStocks}
           setSearchSelectedStocks={setSearchSelectedStocks}
-          productsLoading={productsQuery.isLoading}
-          filteredProducts={filteredProducts}
           selectedItems={selectedItems.filter(isSelectedStockItem)}
           filteredSelectedStocks={filteredSelectedStocks}
-          selectedCountByStockCode={selectedStockCounts}
-          onToggleItem={toggleStockItem}
-          onAddItems={addStockItems}
-          onRemoveItems={removeStockItemsByCode}
+          onOpenStockPicker={() => setShowStockSheet(true)}
           onUpdateItem={updateStockItem}
           onRemoveItem={removeStockItem}
           onPickWarehouse={(itemId) => setWarehouseTarget({ kind: 'stock', itemId })}
-          getWarehouseLabel={(warehouseId) => getWarehouseLabel(warehouses, warehouseId, t('goodsReceiptMobile.warehousePlaceholder'))}
+          onPickYapKod={(itemId) => {
+            setYapKodTargetItemId(itemId);
+            setShowYapKodSheet(true);
+          }}
+          getWarehouseLabel={(warehouseId) => getWarehouseLabel(undefined, warehouseId, t('goodsReceiptMobile.warehousePlaceholder'))}
           getOrderedQuantity={(stockCode) => stockOrderQuantities.get(stockCode) || 0}
         />
       )}
@@ -565,16 +520,20 @@ export function GoodsReceiptCreateScreen({
         )}
       </View>
 
-      <SelectionSheet<Customer>
+      <PagedSelectionSheet<Customer>
         visible={showCustomerSheet}
         title={t('goodsReceiptMobile.customerSelectTitle')}
         placeholder={t('goodsReceiptMobile.searchCustomers')}
         emptyText={t('goodsReceiptMobile.emptySearch')}
-        items={customers}
         selectedValue={form.customerId}
+        queryKey={['goods-receipt-create', 'customer-picker']}
+        fetchPage={({ pageNumber, pageSize, search, signal }) =>
+          goodsReceiptCreateApi.getCustomersPaged(pageNumber, pageSize, search, { signal })
+        }
         getValue={(item) => item.cariKod}
         getLabel={(item) => `${item.cariIsim} (${item.cariKod})`}
         onSelect={(item) => {
+          setSelectedCustomer(item);
           setFormValue('customerId', item.cariKod);
           setFormValue('customerRefId', item.id);
           resetStepTwoState();
@@ -596,17 +555,83 @@ export function GoodsReceiptCreateScreen({
         onClose={() => setShowProjectSheet(false)}
       />
 
-      <SelectionSheet<Warehouse>
+      <PagedSelectionSheet<Order>
+        visible={showOrderSheet}
+        title={t('goodsReceiptMobile.pickOrder')}
+        placeholder={t('goodsReceiptMobile.searchOrders')}
+        emptyText={t('goodsReceiptMobile.noOrderSelectedTitle')}
+        selectedValue={activeOrderNumber ?? undefined}
+        queryKey={['goods-receipt-create', 'order-picker', form.customerId]}
+        fetchPage={({ pageNumber, pageSize, search, signal }) =>
+          goodsReceiptCreateApi.getOrdersByCustomerClientSliced(form.customerId, pageNumber, pageSize, search, { signal })
+        }
+        getValue={(item) => item.siparisNo}
+        getLabel={(item) => `${item.siparisNo} · ${item.customerName || item.customerCode || '-'}${item.projectCode ? ` · ${item.projectCode}` : ''}`}
+        onSelect={(item) => {
+          setSelectedOrder(item);
+          setActiveOrderNumber(item.siparisNo);
+          setOrderTab('items');
+        }}
+        onClose={() => setShowOrderSheet(false)}
+      />
+
+      <PagedSelectionSheet<Warehouse>
         visible={warehouseTarget !== null}
         title={t('goodsReceiptMobile.warehouseSelectTitle')}
         placeholder={t('goodsReceiptMobile.searchWarehouses')}
         emptyText={t('goodsReceiptMobile.emptySearch')}
-        items={warehouses}
         selectedValue={selectedWarehouseValue}
+        queryKey={['goods-receipt-create', 'warehouse-picker', warehouseTarget?.kind]}
+        fetchPage={({ pageNumber, pageSize, search, signal }) =>
+          goodsReceiptCreateApi.getWarehousesPaged(pageNumber, pageSize, search, { signal })
+        }
         getValue={(item) => item.depoKodu.toString()}
         getLabel={(item) => `${item.depoIsmi} (${item.depoKodu})`}
         onSelect={handleWarehouseSelect}
         onClose={() => setWarehouseTarget(null)}
+      />
+
+      <PagedSelectionSheet<Product>
+        visible={showStockSheet}
+        title={t('goodsReceiptMobile.pickStock')}
+        placeholder={t('goodsReceiptMobile.searchStocks')}
+        emptyText={t('goodsReceiptMobile.emptySearch')}
+        queryKey={['goods-receipt-create', 'stock-picker']}
+        fetchPage={({ pageNumber, pageSize, search, signal }) =>
+          goodsReceiptCreateApi.getProductsPaged(pageNumber, pageSize, search, { signal })
+        }
+        getValue={(item) => item.stokKodu}
+        getLabel={(item) => `${item.stokAdi} (${item.stokKodu})`}
+        onSelect={toggleStockItem}
+        onClose={() => setShowStockSheet(false)}
+      />
+
+      <PagedSelectionSheet<YapKodOption>
+        visible={showYapKodSheet}
+        title={t('goodsReceiptMobile.configCode')}
+        placeholder={t('goodsReceiptMobile.searchYapKod')}
+        emptyText={t('goodsReceiptMobile.emptySearch')}
+        queryKey={['goods-receipt-create', 'yapkod-picker', yapKodTargetItem?.stockId ?? yapKodTargetItem?.stockCode ?? 'none']}
+        fetchPage={({ pageNumber, pageSize, search, signal }) =>
+          goodsReceiptCreateApi.getYapKodlarPaged(
+            pageNumber,
+            pageSize,
+            search,
+            { stockId: yapKodTargetItem?.stockId, stockCode: yapKodTargetItem?.stockCode },
+            { signal },
+          )
+        }
+        getValue={(item) => item.yapKod}
+        getLabel={(item) => `${item.yapAcik} (${item.yapKod})`}
+        onSelect={(item) => {
+          if (!yapKodTargetItemId) return;
+          updateStockItem(yapKodTargetItemId, { configCode: item.yapKod, yapKodId: item.id });
+          updateOrderItem(yapKodTargetItemId, { configCode: item.yapKod, yapKodId: item.id });
+        }}
+        onClose={() => {
+          setYapKodTargetItemId(null);
+          setShowYapKodSheet(false);
+        }}
       />
 
       <AppDialog
@@ -628,14 +653,14 @@ export function GoodsReceiptCreateScreen({
   );
 }
 
-function getWarehouseLabel(warehouses: Warehouse[], warehouseId: number | undefined, placeholder: string): string {
+function getWarehouseLabel(warehouses: Warehouse[] | undefined, warehouseId: number | undefined, placeholder: string): string {
   if (!warehouseId) {
     return placeholder;
   }
 
-  const warehouse = warehouses.find((item) => item.depoKodu === warehouseId);
+  const warehouse = warehouses?.find((item) => item.depoKodu === warehouseId);
   if (!warehouse) {
-    return placeholder;
+    return String(warehouseId);
   }
 
   return `${warehouse.depoIsmi} (${warehouse.depoKodu})`;

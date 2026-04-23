@@ -562,6 +562,7 @@
     "notes": "Notes",
     "notesPlaceholder": "Add note or description",
     "ordersTab": "Orders",
+    "pickOrder": "Pick order",
     "itemsTab": "Order content",
     "stocksTab": "Stocks",
     "selectedTab": "Selected",
@@ -572,6 +573,7 @@
     "searchCustomers": "Search customer",
     "searchProjects": "Search project",
     "searchWarehouses": "Search warehouse",
+    "searchYapKod": "Search yapkod",
     "emptySearch": "No records found.",
     "orderDate": "Order date: {{value}}",
     "remainingForImport": "Remaining receipt qty: {{value}}",
@@ -584,7 +586,9 @@
     "customerSelectTitle": "Select customer",
     "projectSelectTitle": "Select project",
     "warehouseSelectTitle": "Select warehouse",
+    "pickStock": "Pick stock",
     "warehousePlaceholder": "Select warehouse",
+    "searchPagedHint": "The first 20 records load first. Continue with search and scroll.",
     "quantityPlaceholder": "Enter quantity",
     "baseQuantity": "Expected quantity: {{value}} {{unit}}",
     "serialNo": "Serial no",
@@ -765,7 +769,10 @@
     "noItems": "No items found for the selected order.",
     "noStocks": "The stock list is empty or could not be loaded.",
     "noOrderSelected": "Select an order first to view its items.",
+    "pickOrder": "Pick order",
     "noCustomerSelected": "Select a customer first to view available orders.",
+    "pickStock": "Pick Stock",
+    "searchPagedHint": "The first 20 records load first. Continue with search and scroll.",
     "remainingQty": "Remaining quantity: {{value}}",
     "fields": {
       "transferDate": "Transfer Date",
@@ -798,9 +805,11 @@
       "quantity": "Enter quantity",
       "itemSourceWarehouse": "Select item source warehouse",
       "customerSearch": "Search customer",
+      "orderSearch": "Search order no",
       "projectSearch": "Search project",
       "warehouseSearch": "Search warehouse",
-      "userSearch": "Search user"
+      "userSearch": "Search user",
+      "stockSearch": "Search stock"
     },
     "validation": {
       "baseFields": "Transfer date and document number are required.",
@@ -829,5 +838,117 @@
     },
     "barcodeValue": "Barcode: {{value}}",
     "barcodeFormat": "Active barcode format: {{format}}"
+  },
+  "inventoryMobile": {
+    "stock": {
+      "title": "Warehouse Stock Balance",
+      "subtitle": "Review aggregated stock balances by warehouse on mobile.",
+      "heroTitle": "Live warehouse stock view",
+      "heroText": "{{count}} balance records are available with search and filters.",
+      "emptyTitle": "No stock balance found",
+      "emptyDescription": "Reset search or filters and try again.",
+      "errorTitle": "Stock balance could not be loaded",
+      "loadFailed": "Warehouse stock balance could not be loaded."
+    },
+    "serial": {
+      "title": "Warehouse Serial Balance",
+      "subtitle": "Track serial, shelf, and warehouse detail on mobile.",
+      "heroTitle": "Serial and shelf visibility",
+      "heroText": "{{count}} serial balance records are ready in a mobile list.",
+      "emptyTitle": "No serial balance found",
+      "emptyDescription": "Update filters and reload the serial list.",
+      "errorTitle": "Serial balance could not be loaded",
+      "loadFailed": "Warehouse serial balance could not be loaded."
+    },
+    "labels": {
+      "warehouse": "Warehouse",
+      "yapKod": "Config Code",
+      "available": "Available",
+      "serialCount": "Serial Count",
+      "shelfCount": "Shelf Count",
+      "lastTxn": "Last Transaction",
+      "shelf": "Shelf",
+      "serialNo2": "Serial 2",
+      "serialNo3": "Serial 3"
+    },
+    "filters": {
+      "stockCode": "Stock Code",
+      "stockName": "Stock Name",
+      "warehouse": "Warehouse",
+      "yapKod": "Config Code",
+      "shelf": "Shelf",
+      "serialNo": "Serial No"
+    }
+  },
+  "packageMobile": {
+    "list": {
+      "title": "Packages",
+      "subtitle": "View cartons, pallets, and packing jobs on mobile.",
+      "heroTitle": "Package tree is ready on mobile",
+      "heroText": "{{count}} packing jobs are listed with filters.",
+      "emptyTitle": "No package record found",
+      "emptyDescription": "Update your search or filters and try again.",
+      "errorTitle": "Package list could not be loaded",
+      "loadFailed": "Package list could not be loaded.",
+      "openTree": "Open tree"
+    },
+    "detail": {
+      "title": "Package Detail",
+      "subtitle": "Header summary and mobile package tree view.",
+      "heroTitle": "Package hierarchy is visible",
+      "heroText": "Track pallets, cartons, and child packages in one flow.",
+      "summaryTitle": "Header Summary",
+      "treeTitle": "Package Tree",
+      "treeSubtitle": "Parent-child package structure",
+      "emptyTitle": "Package tree is empty",
+      "emptyDescription": "No packages exist under this header yet.",
+      "errorTitle": "Package detail could not be loaded",
+      "loadFailed": "Package detail could not be loaded."
+    },
+    "labels": {
+      "customer": "Customer",
+      "warehouse": "Warehouse",
+      "sourceType": "Source Type",
+      "packingDate": "Packing Date",
+      "packageCount": "Package Count",
+      "totalQuantity": "Total Quantity",
+      "totalGrossWeight": "Total Gross Weight",
+      "childCount": "Child Packages",
+      "shelf": "Shelf"
+    },
+    "filters": {
+      "packingNo": "Packing No",
+      "customerCode": "Customer Code",
+      "customerName": "Customer Name",
+      "warehouse": "Warehouse",
+      "sourceType": "Source Type",
+      "status": "Status"
+    }
+  },
+  "packageMoveMobile": {
+    "title": "Move Packages",
+    "subtitle": "Select a source package tree for {{target}}.",
+    "heroTitle": "Choose the source packing job",
+    "heroText": "{{count}} packing jobs are ready in a mobile list.",
+    "emptyTitle": "No movable packing job found",
+    "emptyDescription": "Change filters and try again.",
+    "errorTitle": "Package move screen could not be loaded",
+    "loadFailed": "Package move data could not be loaded.",
+    "treeTitle": "Select Packages",
+    "treeSubtitle": "Mark the packages to move for {{target}}.",
+    "selectionTitle": "Package Selection",
+    "selectionSubtitle": "{{count}} packages selected",
+    "selectAll": "Select All",
+    "clearSelection": "Clear Selection",
+    "noteTitle": "Move Note",
+    "noteSubtitle": "Add an optional note.",
+    "notePlaceholder": "Move note",
+    "moveAction": "Move Packages",
+    "moving": "Moving...",
+    "moveSuccess": "{{packageCount}} packages and {{lineCount}} lines were moved to the target operation.",
+    "moveFailed": "Package move failed.",
+    "cardTitle": "Package Move",
+    "cardSubtitle": "Attach existing packages to transfer or shipment.",
+    "openAction": "Open Package Move"
   }
 }
