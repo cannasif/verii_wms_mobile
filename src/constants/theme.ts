@@ -46,12 +46,14 @@ export const darkGradients = {
   primary: ['#0ea5e9', '#2563eb', '#f97316'] as const,
   surface: ['rgba(13,27,52,0.98)', 'rgba(8,16,31,0.96)'] as const,
   hero: ['rgba(14,165,233,0.16)', 'rgba(37,99,235,0.04)', 'rgba(249,115,22,0.12)'] as const,
+  mainBackground: ['#0F1934', '#050711', '#1A0B26', '#3B1612'] as const,
 } as const;
 
 export const lightGradients = {
   primary: ['#38bdf8', '#0ea5e9', '#f97316'] as const,
   surface: ['rgba(255,255,255,0.98)', 'rgba(240,247,255,0.96)'] as const,
   hero: ['rgba(56,189,248,0.18)', 'rgba(14,165,233,0.04)', 'rgba(249,115,22,0.10)'] as const,
+  mainBackground: ['rgba(56,189,248,0.18)', 'rgba(14,165,233,0.04)', 'rgba(249,115,22,0.10)'] as const,
 } as const;
 
 export const SPACING = {

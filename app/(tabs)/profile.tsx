@@ -10,6 +10,7 @@ import { Text } from '@/components/ui/Text';
 import { RADII, SPACING } from '@/constants/theme';
 import { getAppInfo } from '@/lib/appInfo';
 import { useTheme } from '@/providers/ThemeProvider';
+import { getUserDisplayName } from '@/features/auth/utils';
 import { useAuthStore } from '@/store/auth';
 
 export default function ProfileScreen(): React.ReactElement {
@@ -30,7 +31,7 @@ export default function ProfileScreen(): React.ReactElement {
           iconBackgroundColor={theme.colors.glow}
           label={t('screens.profile.user')}
           labelColor={theme.colors.textSecondary}
-          value={user?.name ?? '-'}
+          value={getUserDisplayName(user ?? undefined) || user?.name || '-'}
         />
         <InfoRow
           icon={<Mail02Icon size={18} color={theme.colors.primary} />}

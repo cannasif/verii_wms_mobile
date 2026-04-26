@@ -10,6 +10,8 @@ interface ScreenHeaderProps {
   title: string;
   subtitle?: string;
   onBack?: () => void;
+  /** Renders immediately to the left of the title (e.g. shortcut icon). */
+  titleLeftSlot?: React.ReactNode;
   rightSlot?: React.ReactNode;
 }
 
@@ -17,16 +19,31 @@ export function ScreenHeader({
   title,
   subtitle,
   onBack,
+  titleLeftSlot,
   rightSlot,
 }: ScreenHeaderProps): React.ReactElement {
   const { theme } = useTheme();
   return (
     <View style={styles.wrapper}>
       <View style={styles.headerRow}>
-        <Pressable style={[styles.backButton, { borderColor: theme.colors.border, backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.03)' : 'rgba(255,255,255,0.04)' }]} onPress={onBack ?? (() => router.back())}>
-          <ArrowLeft01Icon size={20} color={theme.colors.text} />
+        <Pressable
+          style={[
+            styles.backButton,
+            {
+              borderColor: 'rgba(239,68,68,0.35)',
+              backgroundColor: 'rgba(239,68,68,0.10)',
+            },
+          ]}
+          onPress={onBack ?? (() => router.back())}
+        >
+          <ArrowLeft01Icon size={20} color="#ef4444" />
         </Pressable>
-        <Text style={styles.headerTitle}>{title}</Text>
+        <View style={styles.titleBlock}>
+          {titleLeftSlot ? <View style={styles.titleLeft}>{titleLeftSlot}</View> : null}
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {title}
+          </Text>
+        </View>
         <View style={styles.rightSlot}>{rightSlot ?? <View style={styles.placeholder} />}</View>
       </View>
       {subtitle ? <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{subtitle}</Text> : null}
@@ -42,21 +59,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 4,
+  },
+  titleBlock: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.xs,
+    gap: SPACING.xs,
+    minWidth: 0,
+  },
+  titleLeft: {
+    flexShrink: 0,
   },
   backButton: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     borderRadius: RADII.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   headerTitle: {
-    flex: 1,
+    flexShrink: 1,
     textAlign: 'center',
     fontSize: 18,
     fontWeight: '800',
-    paddingHorizontal: SPACING.sm,
   },
   subtitle: { lineHeight: 22 },
   rightSlot: {

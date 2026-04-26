@@ -1,7 +1,6 @@
 import React from 'react';
 import { ScrollView, ScrollViewProps, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { LAYOUT, SPACING } from '@/constants/theme';
-import { useTheme } from '@/providers/ThemeProvider';
 
 interface PageShellProps {
   children: React.ReactNode;
@@ -20,15 +19,13 @@ export function PageShell({
   keyboardShouldPersistTaps = 'handled',
   showsVerticalScrollIndicator = false,
 }: PageShellProps): React.ReactElement {
-  const { theme } = useTheme();
-
   if (!scroll) {
-    return <View style={[styles.root, { backgroundColor: theme.colors.background }, style]}>{children}</View>;
+    return <View style={[styles.root, { backgroundColor: 'transparent' }, style]}>{children}</View>;
   }
 
   return (
     <ScrollView
-      style={[styles.root, { backgroundColor: theme.colors.background }, style]}
+      style={[styles.root, { backgroundColor: 'transparent' }, style]}
       contentContainerStyle={[styles.content, contentContainerStyle]}
       keyboardShouldPersistTaps={keyboardShouldPersistTaps}
       showsVerticalScrollIndicator={showsVerticalScrollIndicator}

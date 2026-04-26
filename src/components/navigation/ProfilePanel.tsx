@@ -2,39 +2,125 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
+  Linking,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as IntentLauncher from 'expo-intent-launcher';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import {
+  ArrowDown01Icon,
   ArrowRight01Icon,
+  ArrowUp01Icon,
   Building03Icon,
+  Call02Icon,
   Cancel01Icon,
+  CheckmarkCircle02Icon,
   Globe02Icon,
+  InformationCircleIcon,
   Logout01Icon,
+  Mail02Icon,
   Moon02Icon,
+  Settings02Icon,
   Sun01Icon,
   UserCircleIcon,
+  WhatsappIcon,
 } from 'hugeicons-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text } from '@/components/ui/Text';
-import { RADII, SPACING } from '@/constants/theme';
-import { cycleLanguage, getCurrentLanguageLabel } from '@/locales';
+import { RADII, SPACING, type AppTheme, type ThemeMode } from '@/constants/theme';
+import i18n, { SUPPORTED_LANGUAGES, getCurrentLanguageLabel, setLanguage, type SupportedLanguage } from '@/locales';
 import { useTheme } from '@/providers/ThemeProvider';
 
 const { width } = Dimensions.get('window');
-const PANEL_WIDTH = width * 0.84;
+const PANEL_WIDTH = Math.min(width * 0.82, 360);
+
+const SUPPORT_WHATSAPP_URL = 'https://wa.me/9050701230188';
+const SUPPORT_TEL_URI = 'tel:+905077108761';
+const SUPPORT_MAIL_URL = 'mailto:info@v3rii.com';
+
+function isLanguageActive(code: SupportedLanguage): boolean {
+  const lng = i18n.language || 'tr';
+  return lng === code || lng.startsWith(`${code}-`);
+}
+
+async function openExternalUrl(url: string): Promise<void> {
+  try {
+    await Linking.openURL(url);
+  } catch {}
+}
+
+async function openSupportPhone(): Promise<void> {
+  if (Platform.OS === 'android') {
+    try {
+      await IntentLauncher.startActivityAsync('android.intent.action.DIAL', {
+        data: SUPPORT_TEL_URI,
+      });
+      return;
+    } catch {}
+  }
+  try {
+    await Linking.openURL(SUPPORT_TEL_URI);
+  } catch {
+    try {
+      await Linking.openURL('tel:905077108761');
+    } catch {}
+  }
+}
+
+function panelAvatarInitial(displayName: string | undefined): string {
+  const t = displayName?.trim();
+  if (!t) return 'W';
+  return t[0].toLocaleUpperCase('tr-TR');
+}
+
+type IconSurfaceKind = 'profile' | 'settings' | 'theme' | 'language' | 'help';
+
+function rowIconSurface(theme: AppTheme, kind: IconSurfaceKind): { bg: string; fg: string } {
+  const light = theme.mode === 'light';
+  switch (kind) {
+    case 'profile':
+      return {
+        bg: light ? 'rgba(2, 132, 199, 0.12)' : 'rgba(56, 189, 248, 0.16)',
+        fg: theme.colors.primaryStrong,
+      };
+    case 'settings':
+      return {
+        bg: light ? 'rgba(15, 23, 42, 0.07)' : 'rgba(248, 250, 252, 0.08)',
+        fg: theme.colors.textSecondary,
+      };
+    case 'theme':
+      return {
+        bg: light ? 'rgba(2, 132, 199, 0.1)' : 'rgba(99, 102, 241, 0.2)',
+        fg: light ? theme.colors.primaryStrong : '#e9d5ff',
+      };
+    case 'language':
+      return {
+        bg: light ? 'rgba(234, 88, 12, 0.11)' : 'rgba(251, 146, 60, 0.16)',
+        fg: theme.colors.accent,
+      };
+    case 'help':
+      return {
+        bg: light ? 'rgba(5, 150, 105, 0.1)' : 'rgba(52, 211, 153, 0.14)',
+        fg: theme.colors.success,
+      };
+    default:
+      return { bg: 'transparent', fg: theme.colors.text };
+  }
+}
 
 interface ProfilePanelProps {
   isOpen: boolean;
   onClose: () => void;
-  userName?: string;
+  displayName?: string;
   email?: string;
   branch?: string;
   onLogout: () => void;
@@ -43,18 +129,26 @@ interface ProfilePanelProps {
 export function ProfilePanel({
   isOpen,
   onClose,
-  userName,
+  displayName,
   email,
   branch,
   onLogout,
 }: ProfilePanelProps): React.ReactElement | null {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const { t } = useTranslation();
-  const { theme, mode, toggleThemeMode } = useTheme();
+  const { theme, mode, setThemeMode } = useTheme();
   const [isVisible, setIsVisible] = useState(isOpen);
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const translateX = useRef(new Animated.Value(PANEL_WIDTH)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!isOpen) {
+      setLangMenuOpen(false);
+      setHelpOpen(false);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -62,12 +156,12 @@ export function ProfilePanel({
       Animated.parallel([
         Animated.timing(translateX, {
           toValue: 0,
-          duration: 260,
+          duration: 280,
           useNativeDriver: true,
         }),
         Animated.timing(backdropOpacity, {
           toValue: 1,
-          duration: 260,
+          duration: 280,
           useNativeDriver: true,
         }),
       ]).start();
@@ -77,18 +171,44 @@ export function ProfilePanel({
     Animated.parallel([
       Animated.timing(translateX, {
         toValue: PANEL_WIDTH,
-        duration: 220,
+        duration: 240,
         useNativeDriver: true,
       }),
       Animated.timing(backdropOpacity, {
         toValue: 0,
-        duration: 220,
+        duration: 240,
         useNativeDriver: true,
       }),
     ]).start(() => {
       setIsVisible(false);
     });
   }, [backdropOpacity, isOpen, translateX]);
+
+  const backdropTint =
+    theme.mode === 'light' ? 'rgba(15, 23, 42, 0.2)' : 'rgba(2, 6, 18, 0.52)';
+
+  const panelSurface =
+    theme.mode === 'light'
+      ? (['#ffffff', '#f4f7fb', '#f1f5f9'] as const)
+      : (['#141d2f', '#0f1729', '#0c1424'] as const);
+
+  const avatarRingColors =
+    theme.mode === 'light'
+      ? (['#93c5fd', '#bfdbfe', '#e2e8f0'] as const)
+      : (['#475569', '#334155', '#1e293b'] as const);
+
+  const avatarInnerBg = theme.mode === 'light' ? '#f8fafc' : '#0a1220';
+  const groupBg =
+    theme.mode === 'light' ? 'rgba(255, 255, 255, 0.78)' : 'rgba(255, 255, 255, 0.04)';
+  const groupBorder =
+    theme.mode === 'light' ? 'rgba(15, 23, 42, 0.08)' : 'rgba(148, 163, 184, 0.12)';
+
+  const surf = (k: IconSurfaceKind) => rowIconSurface(theme, k);
+
+  const onThemeSwitch = (dark: boolean): void => {
+    const next: ThemeMode = dark ? 'dark' : 'light';
+    void setThemeMode(next);
+  };
 
   if (!isVisible) {
     return null;
@@ -104,7 +224,7 @@ export function ProfilePanel({
               styles.backdrop,
               {
                 opacity: backdropOpacity,
-                backgroundColor: theme.mode === 'light' ? 'rgba(148,163,184,0.34)' : 'rgba(3, 9, 18, 0.58)',
+                backgroundColor: backdropTint,
               },
             ]}
           />
@@ -118,181 +238,409 @@ export function ProfilePanel({
               top: insets.top,
               bottom: 0,
               paddingBottom: Math.max(insets.bottom, SPACING.md),
-              backgroundColor: theme.colors.card,
-              borderLeftColor: theme.colors.border,
               transform: [{ translateX }],
+              borderLeftColor: groupBorder,
             },
           ]}
         >
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={[
-                styles.closeButton,
-                {
-                  backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.04)' : 'rgba(255,255,255,0.05)',
-                  borderColor: theme.colors.border,
-                },
-              ]}
-              onPress={onClose}
-            >
-              <Cancel01Icon size={20} color={theme.colors.text} />
-            </TouchableOpacity>
-          </View>
+          <LinearGradient colors={panelSurface} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
+          <View style={styles.panelInner}>
+            <View style={styles.header}>
+              <Pressable
+                onPress={onClose}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.close')}
+                style={({ pressed }) => [
+                  styles.closeButton,
+                  pressed
+                    ? {
+                        backgroundColor:
+                          theme.mode === 'light' ? 'rgba(254, 202, 202, 0.95)' : 'rgba(251, 113, 133, 0.22)',
+                        borderColor:
+                          theme.mode === 'light' ? 'rgba(239, 68, 68, 0.45)' : 'rgba(252, 165, 165, 0.45)',
+                      }
+                    : {
+                        backgroundColor:
+                          theme.mode === 'light' ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.06)',
+                        borderColor: groupBorder,
+                      },
+                ]}
+              >
+                {({ pressed }) => (
+                  <Cancel01Icon
+                    size={20}
+                    color={
+                      pressed
+                        ? theme.mode === 'light'
+                          ? 'rgba(185, 28, 28, 0.95)'
+                          : 'rgba(254, 202, 202, 0.98)'
+                        : theme.colors.textMuted
+                    }
+                  />
+                )}
+              </Pressable>
+            </View>
 
-          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            <View style={styles.hero}>
-              <LinearGradient colors={theme.gradients.primary} style={styles.avatarBorder}>
-                <View style={[styles.avatarInner, { backgroundColor: theme.mode === 'light' ? '#eff6ff' : '#09172c' }]}>
-                  <Text style={styles.avatarText}>{(userName?.slice(0, 1) || 'W').toUpperCase()}</Text>
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+              <View style={styles.heroBlock}>
+                <View style={styles.avatarWrap}>
+                  <LinearGradient colors={avatarRingColors} style={styles.avatarBorder}>
+                    <View style={[styles.avatarInner, { backgroundColor: avatarInnerBg }]}>
+                      <Text style={[styles.avatarText, { color: theme.colors.primaryStrong }]}>
+                        {panelAvatarInitial(displayName)}
+                      </Text>
+                    </View>
+                  </LinearGradient>
+                  <View
+                    style={[
+                      styles.onlineDot,
+                      {
+                        backgroundColor: theme.colors.success,
+                        borderColor: avatarInnerBg,
+                      },
+                    ]}
+                  />
                 </View>
-              </LinearGradient>
-              <Text style={styles.userName}>{userName || t('panel.defaultUser')}</Text>
-              <Text style={[styles.userEmail, { color: theme.colors.textSecondary }]}>{email || '-'}</Text>
+              </View>
+
+              <Text style={[styles.userName, { color: theme.colors.text }]}>
+                {displayName?.trim() ? displayName.trim() : t('panel.defaultUser')}
+              </Text>
+              <Text style={[styles.userEmail, { color: theme.colors.textSecondary }]}>{email?.trim() ? email.trim() : '—'}</Text>
               <View
                 style={[
                   styles.branchBadge,
                   {
-                    backgroundColor: theme.mode === 'light' ? 'rgba(249,115,22,0.08)' : 'rgba(249,115,22,0.12)',
-                    borderColor: theme.mode === 'light' ? 'rgba(249,115,22,0.22)' : 'rgba(249,115,22,0.18)',
+                    backgroundColor:
+                      theme.mode === 'light' ? 'rgba(234, 88, 12, 0.07)' : 'rgba(251, 146, 60, 0.1)',
+                    borderColor:
+                      theme.mode === 'light' ? 'rgba(234, 88, 12, 0.18)' : 'rgba(251, 146, 60, 0.22)',
                   },
                 ]}
               >
                 <Building03Icon size={14} color={theme.colors.accent} />
-                <Text style={[styles.branchText, { color: theme.colors.accent }]}>{branch || t('screens.profile.noBranch')}</Text>
+                <Text style={[styles.branchText, { color: theme.colors.accent }]}>
+                  {branch || t('screens.profile.noBranch')}
+                </Text>
               </View>
-            </View>
 
-            <Text style={[styles.groupTitle, { color: theme.colors.textMuted }]}>{t('panel.account')}</Text>
-            <View
-              style={[
-                styles.group,
-                {
-                  borderColor: theme.colors.border,
-                  backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.02)' : 'rgba(255,255,255,0.03)',
-                },
-              ]}
-            >
-              <TouchableOpacity
-                style={styles.row}
-                onPress={() => {
-                  onClose();
-                  setTimeout(() => {
-                    router.push('/(tabs)/profile');
-                  }, 180);
-                }}
-              >
-                <View style={[styles.iconBox, styles.profileIconBox, { backgroundColor: theme.mode === 'light' ? 'rgba(59,130,246,0.10)' : 'rgba(56,189,248,0.1)' }]}>
-                  <UserCircleIcon size={20} color={theme.colors.primary} />
-                </View>
-                <View style={styles.rowCopy}>
-                  <Text style={styles.rowTitle}>{t('panel.profileTitle')}</Text>
-                  <Text style={[styles.rowDescription, { color: theme.colors.textSecondary }]}>{t('panel.profileDescription')}</Text>
-                </View>
-                <ArrowRight01Icon size={18} color={theme.colors.textMuted} />
-              </TouchableOpacity>
-
-              <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
-
-              <TouchableOpacity
-                style={styles.row}
-                onPress={() => {
-                  onClose();
-                  setTimeout(() => {
-                    router.push('/(tabs)/settings');
-                  }, 180);
-                }}
-              >
-                <View style={[styles.iconBox, styles.languageIconBox, { backgroundColor: theme.mode === 'light' ? 'rgba(14,165,233,0.10)' : 'rgba(14,165,233,0.12)' }]}>
-                  <Globe02Icon size={20} color={theme.colors.primaryStrong} />
-                </View>
-                <View style={styles.rowCopy}>
-                  <Text style={styles.rowTitle}>{t('panel.settingsTitle')}</Text>
-                  <Text style={[styles.rowDescription, { color: theme.colors.textSecondary }]}>{t('panel.settingsDescription')}</Text>
-                </View>
-                <ArrowRight01Icon size={18} color={theme.colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={[styles.groupTitle, { color: theme.colors.textMuted }]}>{t('panel.preferences')}</Text>
-            <View
-              style={[
-                styles.group,
-                {
-                  borderColor: theme.colors.border,
-                  backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.02)' : 'rgba(255,255,255,0.03)',
-                },
-              ]}
-            >
-              <View style={styles.row}>
-                <View style={[styles.iconBox, styles.languageIconBox, { backgroundColor: theme.mode === 'light' ? 'rgba(14,165,233,0.10)' : 'rgba(14,165,233,0.12)' }]}>
-                  <Globe02Icon size={20} color={theme.colors.primaryStrong} />
-                </View>
-                <View style={styles.rowCopy}>
-                  <Text style={styles.rowTitle}>{t('panel.language')}</Text>
-                  <Text style={[styles.rowDescription, { color: theme.colors.textSecondary }]}>{t('panel.languageDescription')}</Text>
-                </View>
+              <Text style={[styles.groupTitle, { color: theme.colors.textMuted }]}>{t('panel.account')}</Text>
+              <View style={[styles.group, { borderColor: groupBorder, backgroundColor: groupBg }]}>
                 <TouchableOpacity
-                  style={[
-                    styles.languagePill,
-                    {
-                      borderColor: theme.colors.border,
-                      backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.04)' : 'rgba(255,255,255,0.04)',
-                    },
-                  ]}
-                  onPress={() => void cycleLanguage()}
+                  style={styles.row}
+                  onPress={() => {
+                    onClose();
+                    setTimeout(() => {
+                      router.push('/(tabs)/profile');
+                    }, 180);
+                  }}
                 >
-                  <Text style={[styles.languagePillText, { color: theme.colors.primary }]}>{getCurrentLanguageLabel()}</Text>
+                  <View style={[styles.iconBox, { backgroundColor: surf('profile').bg }]}>
+                    <UserCircleIcon size={20} color={surf('profile').fg} />
+                  </View>
+                  <View style={styles.rowCopy}>
+                    <Text style={[styles.rowTitle, { color: theme.colors.text }]}>{t('panel.profileSettingsTitle')}</Text>
+                    <Text style={[styles.rowDescription, { color: theme.colors.textSecondary }]}>
+                      {t('panel.profileDescription')}
+                    </Text>
+                  </View>
+                  <ArrowRight01Icon size={18} color={theme.colors.textMuted} />
+                </TouchableOpacity>
+
+                <View style={[styles.divider, { backgroundColor: groupBorder }]} />
+
+                <TouchableOpacity
+                  style={styles.row}
+                  onPress={() => {
+                    onClose();
+                    setTimeout(() => {
+                      router.push('/(tabs)/settings');
+                    }, 180);
+                  }}
+                >
+                  <View style={[styles.iconBox, { backgroundColor: surf('settings').bg }]}>
+                    <Settings02Icon size={20} color={surf('settings').fg} />
+                  </View>
+                  <View style={styles.rowCopy}>
+                    <Text style={[styles.rowTitle, { color: theme.colors.text }]}>{t('panel.generalSettingsTitle')}</Text>
+                    <Text style={[styles.rowDescription, { color: theme.colors.textSecondary }]}>
+                      {t('panel.settingsDescription')}
+                    </Text>
+                  </View>
+                  <ArrowRight01Icon size={18} color={theme.colors.textMuted} />
                 </TouchableOpacity>
               </View>
 
-              <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+              <Text style={[styles.groupTitle, { color: theme.colors.textMuted }]}>{t('panel.preferences')}</Text>
+              <View style={[styles.group, { borderColor: groupBorder, backgroundColor: groupBg }]}>
+                <View style={styles.row}>
+                  <View style={[styles.iconBox, { backgroundColor: surf('theme').bg }]}>
+                    {mode === 'dark' ? (
+                      <Moon02Icon size={20} color={surf('theme').fg} />
+                    ) : (
+                      <Sun01Icon size={20} color={surf('theme').fg} />
+                    )}
+                  </View>
+                  <View style={styles.rowCopy}>
+                    <Text style={[styles.rowTitle, { color: theme.colors.text }]}>
+                      {mode === 'dark' ? t('panel.themeRowDark') : t('panel.themeRowLight')}
+                    </Text>
+                    <Text style={[styles.rowDescription, { color: theme.colors.textSecondary }]}>
+                      {t('panel.appearancePersonalize')}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={mode === 'dark'}
+                    onValueChange={onThemeSwitch}
+                    trackColor={{
+                      false: theme.mode === 'light' ? 'rgba(15,23,42,0.12)' : 'rgba(148,163,184,0.22)',
+                      true:
+                        theme.mode === 'light'
+                          ? 'rgba(2, 132, 199, 0.5)'
+                          : 'rgba(139, 92, 246, 0.55)',
+                    }}
+                    thumbColor="#f8fafc"
+                    ios_backgroundColor={
+                      theme.mode === 'light' ? 'rgba(15,23,42,0.12)' : 'rgba(148,163,184,0.22)'
+                    }
+                  />
+                </View>
 
-              <View style={styles.row}>
-                <View style={[styles.iconBox, styles.appearanceIconBox, { backgroundColor: theme.mode === 'light' ? 'rgba(249,115,22,0.10)' : 'rgba(249,115,22,0.12)' }]}>
-                  {mode === 'dark' ? (
-                    <Moon02Icon size={20} color={theme.colors.primary} />
+                <View style={[styles.divider, { backgroundColor: groupBorder }]} />
+
+                <Pressable
+                  style={({ pressed }) => [styles.row, pressed && { opacity: 0.92 }]}
+                  onPress={() => {
+                    setLangMenuOpen((v) => !v);
+                    setHelpOpen(false);
+                  }}
+                >
+                  <View style={[styles.iconBox, { backgroundColor: surf('language').bg }]}>
+                    <Globe02Icon size={20} color={surf('language').fg} />
+                  </View>
+                  <View style={styles.rowCopy}>
+                    <Text style={[styles.rowTitle, { color: theme.colors.text }]}>{t('panel.appLanguageTitle')}</Text>
+                    <Text style={[styles.rowDescription, { color: theme.colors.textSecondary }]}>
+                      {t('panel.languageDescription')}
+                    </Text>
+                  </View>
+                  <View style={styles.rowTrail}>
+                    <View
+                      style={[
+                        styles.langBadge,
+                        {
+                          borderColor: groupBorder,
+                          backgroundColor:
+                            theme.mode === 'light' ? 'rgba(15,23,42,0.04)' : 'rgba(255,255,255,0.06)',
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.langBadgeText, { color: theme.colors.text }]}>{getCurrentLanguageLabel()}</Text>
+                    </View>
+                    {langMenuOpen ? (
+                      <ArrowUp01Icon size={18} color={theme.colors.textMuted} />
+                    ) : (
+                      <ArrowDown01Icon size={18} color={theme.colors.textMuted} />
+                    )}
+                  </View>
+                </Pressable>
+
+                {langMenuOpen ? (
+                  <View style={[styles.expandBlock, { backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.02)' : 'rgba(0,0,0,0.12)' }]}>
+                    <View style={styles.langChipsRow}>
+                      {SUPPORTED_LANGUAGES.map((code) => {
+                        const active = isLanguageActive(code);
+                        const label = code === 'tr' ? t('panel.languageNameTr') : t('panel.languageNameEn');
+                        return (
+                          <Pressable
+                            key={code}
+                            onPress={() => {
+                              void setLanguage(code);
+                            }}
+                            style={({ pressed }) => [
+                              styles.langChip,
+                              {
+                                borderColor: active ? theme.colors.primaryStrong : groupBorder,
+                                backgroundColor: active
+                                  ? theme.mode === 'light'
+                                    ? theme.colors.primaryStrong
+                                    : 'rgba(56, 189, 248, 0.35)'
+                                  : theme.mode === 'light'
+                                    ? 'rgba(255,255,255,0.85)'
+                                    : 'rgba(255,255,255,0.05)',
+                                opacity: pressed ? 0.9 : 1,
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.langChipText,
+                                {
+                                  color: active
+                                    ? theme.mode === 'light'
+                                      ? '#ffffff'
+                                      : theme.colors.text
+                                    : theme.colors.text,
+                                },
+                              ]}
+                            >
+                              {label}
+                            </Text>
+                            {active ? (
+                              <CheckmarkCircle02Icon
+                                size={18}
+                                color={active && theme.mode === 'light' ? '#ffffff' : theme.colors.primaryStrong}
+                              />
+                            ) : null}
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+                ) : null}
+
+                <View style={[styles.divider, { backgroundColor: groupBorder }]} />
+
+                <Pressable
+                  style={({ pressed }) => [styles.row, pressed && { opacity: 0.92 }]}
+                  onPress={() => {
+                    setHelpOpen((v) => !v);
+                    setLangMenuOpen(false);
+                  }}
+                >
+                  <View style={[styles.iconBox, { backgroundColor: surf('help').bg }]}>
+                    <InformationCircleIcon size={20} color={surf('help').fg} />
+                  </View>
+                  <View style={styles.rowCopy}>
+                    <Text style={[styles.rowTitle, { color: theme.colors.text }]}>{t('panel.helpTitle')}</Text>
+                    <Text style={[styles.rowDescription, { color: theme.colors.textSecondary }]}>
+                      {t('panel.helpDescription')}
+                    </Text>
+                  </View>
+                  {helpOpen ? (
+                    <ArrowUp01Icon size={18} color={theme.colors.textMuted} />
                   ) : (
-                    <Sun01Icon size={20} color={theme.colors.primary} />
+                    <ArrowDown01Icon size={18} color={theme.colors.textMuted} />
                   )}
-                </View>
-                <View style={styles.rowCopy}>
-                  <Text style={styles.rowTitle}>{t('panel.appearance')}</Text>
-                  <Text style={[styles.rowDescription, { color: theme.colors.textSecondary }]}>{t('panel.appearanceDescription')}</Text>
-                </View>
-                <TouchableOpacity
-                  style={[
-                    styles.languagePill,
-                    {
-                      borderColor: theme.colors.border,
-                      backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.04)' : 'rgba(255,255,255,0.04)',
-                    },
-                  ]}
-                  onPress={() => void toggleThemeMode()}
-                >
-                  <Text style={[styles.languagePillText, { color: theme.colors.primary }]}>
-                    {mode === 'dark' ? t('panel.appearanceDark') : t('panel.appearanceLight')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+                </Pressable>
 
-            <TouchableOpacity
-              style={[
-                styles.logoutButton,
-                {
-                  borderColor: theme.mode === 'light' ? 'rgba(239,68,68,0.24)' : 'rgba(251,113,133,0.28)',
-                  backgroundColor: theme.mode === 'light' ? 'rgba(239,68,68,0.06)' : 'rgba(251,113,133,0.08)',
-                },
-              ]}
-              onPress={() => {
-                onClose();
-                setTimeout(() => onLogout(), 180);
-              }}
-            >
-              <Logout01Icon size={18} color={theme.colors.danger} />
-              <Text style={[styles.logoutText, { color: theme.colors.danger }]}>{t('common.logout')}</Text>
-            </TouchableOpacity>
-          </ScrollView>
+                {helpOpen ? (
+                  <View style={[styles.helpNested, { backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.02)' : 'rgba(0,0,0,0.14)' }]}>
+                    <TouchableOpacity
+                      style={[
+                        styles.helpSubRow,
+                        {
+                          borderColor: groupBorder,
+                          backgroundColor:
+                            theme.mode === 'light' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.05)',
+                        },
+                      ]}
+                      activeOpacity={0.78}
+                      onPress={() => void openExternalUrl(SUPPORT_WHATSAPP_URL)}
+                    >
+                      <View style={styles.helpSubIconSlot}>
+                        <WhatsappIcon size={20} color={theme.colors.success} />
+                      </View>
+                      <Text style={[styles.helpSubText, { color: theme.colors.text }]} numberOfLines={1}>
+                        {t('panel.helpWhatsapp')}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.helpSubRow,
+                        {
+                          borderColor: groupBorder,
+                          backgroundColor:
+                            theme.mode === 'light' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.05)',
+                        },
+                      ]}
+                      activeOpacity={0.78}
+                      onPress={() => void openExternalUrl(SUPPORT_MAIL_URL)}
+                    >
+                      <View style={styles.helpSubIconSlot}>
+                        <Mail02Icon size={20} color={theme.colors.primaryStrong} />
+                      </View>
+                      <Text style={[styles.helpSubText, { color: theme.colors.text }]} numberOfLines={1}>
+                        {t('panel.helpMail')}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.helpSubRow,
+                        {
+                          borderColor: groupBorder,
+                          backgroundColor:
+                            theme.mode === 'light' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.05)',
+                        },
+                      ]}
+                      activeOpacity={0.78}
+                      onPress={() => void openSupportPhone()}
+                    >
+                      <View style={styles.helpSubIconSlot}>
+                        <Call02Icon size={20} color={theme.colors.accent} />
+                      </View>
+                      <Text style={[styles.helpSubText, { color: theme.colors.text }]} numberOfLines={1}>
+                        {t('panel.helpCall')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
+              </View>
+
+              <Pressable
+                onPress={() => {
+                  onClose();
+                  setTimeout(() => onLogout(), 180);
+                }}
+                style={({ pressed }) => [
+                  styles.logoutButton,
+                  pressed
+                    ? {
+                        borderColor:
+                          theme.mode === 'light' ? 'rgba(225, 29, 72, 0.42)' : 'rgba(252, 165, 165, 0.45)',
+                        backgroundColor:
+                          theme.mode === 'light' ? 'rgba(254, 202, 202, 0.55)' : 'rgba(251, 113, 133, 0.18)',
+                      }
+                    : {
+                        borderColor:
+                          theme.mode === 'light' ? 'rgba(225, 29, 72, 0.24)' : 'rgba(251, 113, 133, 0.28)',
+                        backgroundColor:
+                          theme.mode === 'light' ? 'rgba(225, 29, 72, 0.05)' : 'rgba(251, 113, 133, 0.08)',
+                      },
+                ]}
+              >
+                {({ pressed }) => (
+                  <>
+                    <Logout01Icon
+                      size={18}
+                      color={
+                        pressed
+                          ? theme.mode === 'light'
+                            ? 'rgba(159, 18, 57, 0.98)'
+                            : 'rgba(254, 205, 211, 0.98)'
+                          : theme.colors.danger
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.logoutText,
+                        {
+                          color:
+                            pressed
+                              ? theme.mode === 'light'
+                                ? 'rgba(159, 18, 57, 0.98)'
+                                : 'rgba(254, 205, 211, 0.98)'
+                              : theme.colors.danger,
+                        },
+                      ]}
+                    >
+                      {t('panel.logoutFull')}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            </ScrollView>
+          </View>
         </Animated.View>
       </View>
     </Modal>
@@ -305,23 +653,27 @@ const styles = StyleSheet.create({
   panel: {
     position: 'absolute',
     right: 0,
-    borderLeftWidth: 1,
+    borderLeftWidth: StyleSheet.hairlineWidth * 2,
     borderTopLeftRadius: RADII.xxl,
     borderBottomLeftRadius: RADII.xxl,
-    shadowColor: '#000',
-    shadowOpacity: 0.24,
-    shadowOffset: { width: -8, height: 0 },
+    overflow: 'hidden',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.12,
+    shadowOffset: { width: -4, height: 6 },
     shadowRadius: 24,
-    elevation: 20,
+    elevation: 14,
+  },
+  panelInner: {
+    flex: 1,
   },
   header: {
     alignItems: 'flex-end',
     paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.md,
+    paddingTop: SPACING.sm,
   },
   closeButton: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     borderRadius: RADII.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -330,86 +682,111 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: SPACING.lg,
     paddingBottom: SPACING.xl,
+    paddingTop: 2,
   },
-  hero: {
+  heroBlock: {
     alignItems: 'center',
-    marginBottom: SPACING.xxl,
+    justifyContent: 'flex-start',
+    marginBottom: SPACING.sm,
+    minHeight: 96,
+  },
+  avatarWrap: {
+    position: 'relative',
+    width: 92,
+    height: 92,
+    marginTop: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   avatarBorder: {
-    width: 98,
-    height: 98,
-    borderRadius: 49,
+    width: 92,
+    height: 92,
+    borderRadius: 46,
     padding: 3,
-    marginBottom: 14,
   },
   avatarInner: {
     flex: 1,
-    borderRadius: 46,
+    borderRadius: 43,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    color: '#fff',
-    fontSize: 34,
-    fontWeight: '900',
+    fontSize: 32,
+    fontWeight: '800',
+  },
+  onlineDot: {
+    position: 'absolute',
+    right: 2,
+    bottom: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 2,
   },
   userName: {
-    fontSize: 22,
-    fontWeight: '900',
+    fontSize: 20,
+    fontWeight: '800',
     marginBottom: 4,
+    textAlign: 'center',
   },
   userEmail: {
-    marginBottom: 12,
+    fontSize: 14,
+    marginBottom: SPACING.sm,
+    textAlign: 'center',
   },
   branchBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'center',
     gap: 6,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs - 1,
+    paddingHorizontal: SPACING.sm + 2,
+    paddingVertical: 7,
     borderRadius: RADII.pill,
     borderWidth: 1,
+    maxWidth: '100%',
+    marginBottom: SPACING.xl,
   },
   branchText: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
+    flexShrink: 1,
   },
   groupTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.1,
     marginBottom: SPACING.xs,
-    marginLeft: SPACING.xxs,
+    marginLeft: 4,
   },
   group: {
     borderRadius: RADII.xl,
     borderWidth: 1,
     overflow: 'hidden',
-    marginBottom: SPACING.lg + 2,
+    marginBottom: SPACING.lg,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    gap: SPACING.sm + 2,
+    paddingVertical: SPACING.md + 4,
+    gap: SPACING.sm,
   },
   rowCopy: {
     flex: 1,
-    gap: SPACING.xxs,
+    gap: 3,
   },
   rowTitle: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   rowDescription: {
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 17,
   },
   divider: {
-    height: 1,
-    marginLeft: 66,
+    height: StyleSheet.hairlineWidth * 2,
+    marginLeft: 62,
   },
   iconBox: {
     width: 40,
@@ -418,36 +795,89 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  profileIconBox: {},
-  languageIconBox: {},
-  appearanceIconBox: {},
-  languagePill: {
-    minWidth: 58,
+  rowTrail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  langBadge: {
+    minWidth: 36,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: RADII.sm,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  langBadgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  expandBlock: {
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.md,
+    paddingTop: 2,
+  },
+  langChipsRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  langChip: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
+    minHeight: 44,
     paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs + 2,
-    borderRadius: RADII.pill,
+    borderRadius: RADII.md,
     borderWidth: 1,
   },
-  languagePillText: {
-    fontSize: 12,
-    fontWeight: '900',
+  langChipText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  helpNested: {
+    paddingHorizontal: SPACING.sm,
+    paddingBottom: SPACING.sm,
+    paddingTop: 0,
+    gap: SPACING.xs,
+  },
+  helpSubRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: SPACING.xs,
+    minHeight: 48,
+    height: 48,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADII.md,
+    borderWidth: 1,
+    gap: SPACING.sm,
+  },
+  helpSubIconSlot: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  helpSubText: {
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
   },
   logoutButton: {
-    marginTop: SPACING.xs - 2,
+    marginTop: SPACING.sm,
     borderRadius: RADII.lg,
-    paddingVertical: SPACING.md,
+    paddingVertical: SPACING.sm + 4,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.xs,
     borderWidth: 1,
-    borderColor: 'rgba(251,113,133,0.28)',
-    backgroundColor: 'rgba(251,113,133,0.08)',
+    alignSelf: 'stretch',
+    width: '100%',
   },
   logoutText: {
     fontSize: 15,
-    fontWeight: '900',
+    fontWeight: '800',
   },
 });
