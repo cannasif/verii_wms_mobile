@@ -7,6 +7,44 @@ export interface BarcodeFeedbackState {
   errorCode?: string;
 }
 
+function toObjectDetails(details: unknown): unknown {
+  if (typeof details !== 'string') {
+    return details;
+  }
+  const text = details.trim();
+  if (!text) {
+    return details;
+  }
+  if (!(text.startsWith('{') || text.startsWith('['))) {
+    return details;
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    return details;
+  }
+}
+
+function extractErrorCode(details: unknown): string | undefined {
+  if (!details || typeof details !== 'object') {
+    return undefined;
+  }
+
+  const source = details as {
+    errorCode?: unknown;
+    data?: { errorCode?: unknown };
+    details?: { errorCode?: unknown };
+  };
+
+  const candidates = [source.errorCode, source.data?.errorCode, source.details?.errorCode];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate;
+    }
+  }
+  return undefined;
+}
+
 function extractCandidates(details: unknown): BarcodeMatchCandidate[] {
   if (!details || typeof details !== 'object') {
     return [];
@@ -34,13 +72,12 @@ function extractCandidates(details: unknown): BarcodeMatchCandidate[] {
 }
 
 export function extractBarcodeFeedback(error: AppError): BarcodeFeedbackState {
-  const payload = error.details;
-  const source = payload && typeof payload === 'object' ? (payload as { errorCode?: string }) : undefined;
+  const payload = toObjectDetails(error.details);
 
   return {
     message: error.message,
     candidates: extractCandidates(payload),
-    errorCode: source?.errorCode,
+    errorCode: extractErrorCode(payload),
   };
 }
 

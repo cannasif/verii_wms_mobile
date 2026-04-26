@@ -9,7 +9,12 @@ export function isRequestCanceled(error: unknown): boolean {
     return true;
   }
 
-  if (error instanceof DOMException && error.name === 'AbortError') {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    (error as { name?: string }).name === 'AbortError'
+  ) {
     return true;
   }
 
