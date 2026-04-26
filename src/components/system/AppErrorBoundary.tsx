@@ -43,7 +43,7 @@ export class AppErrorBoundary extends React.Component<React.PropsWithChildren, S
     if (this.state.hasError) {
       const theme = createTheme(useUIStore.getState().themeMode);
       return (
-        <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.root, { backgroundColor: 'transparent' }]}>
           <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
             <Text style={styles.title}>{i18n.t('system.errorBoundary.title')}</Text>
             <Text style={[styles.description, { color: theme.colors.textSecondary }]}>{this.state.message || i18n.t('system.errorBoundary.fallbackMessage')}</Text>

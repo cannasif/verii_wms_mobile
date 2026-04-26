@@ -3,6 +3,7 @@ import 'react-native-gesture-handler';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, LogBox, View } from 'react-native';
 import { router, Stack } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -72,9 +73,7 @@ function RootLayoutContent(): React.ReactElement {
         } else if (force) {
           setVersionState(null);
         }
-      } catch {
-        // Version check should not block app startup.
-      }
+      } catch {}
     },
     [isHydrated, isInstallingUpdate],
   );
@@ -135,89 +134,101 @@ function RootLayoutContent(): React.ReactElement {
 
   if (!isHydrated) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.background }}>
+      <LinearGradient
+        colors={theme.gradients.mainBackground}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+      >
         <ActivityIndicator color={theme.colors.primary} />
-      </View>
+      </LinearGradient>
     );
   }
 
   return (
-    <AppErrorBoundary>
-      <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <I18nextProvider i18n={i18n}>
-            <>
-              <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.background } }} />
-              <AppDialog
-                visible={Boolean(versionState)}
-                title={
-                  isInstallingUpdate
-                    ? i18n.t('updates.downloadingTitle')
-                    : versionState?.forceUpdate
-                      ? i18n.t('updates.forceTitle')
-                      : i18n.t('updates.availableTitle')
-                }
-                description={
-                  isInstallingUpdate
-                    ? i18n.t('updates.downloadingDescription', {
-                        percent: Math.round(downloadProgress * 100),
-                      })
-                    : versionState
-                    ? i18n.t('updates.description', {
-                        version: versionState.latestVersion,
-                        notes: versionState.releaseNotes || i18n.t('updates.noNotes'),
-                      })
-                    : undefined
-                }
-                onClose={() => {
-                  if (!versionState?.forceUpdate && !isInstallingUpdate) {
-                    setVersionState(null);
+    <LinearGradient
+      colors={theme.gradients.mainBackground}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{ flex: 1 }}
+    >
+      <AppErrorBoundary>
+        <SafeAreaProvider>
+          <QueryClientProvider client={queryClient}>
+            <I18nextProvider i18n={i18n}>
+              <>
+                <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }} />
+                <AppDialog
+                  visible={Boolean(versionState)}
+                  title={
+                    isInstallingUpdate
+                      ? i18n.t('updates.downloadingTitle')
+                      : versionState?.forceUpdate
+                        ? i18n.t('updates.forceTitle')
+                        : i18n.t('updates.availableTitle')
                   }
-                }}
-                actions={
-                  versionState?.forceUpdate
-                    ? [
-                        {
-                          label: i18n.t('updates.details'),
-                          tone: 'secondary',
-                          disabled: isInstallingUpdate,
-                          onPress: handleOpenDetails,
-                        },
-                        {
-                          label: isInstallingUpdate ? i18n.t('updates.installingNow') : i18n.t('updates.installNow'),
-                          disabled: isInstallingUpdate,
-                          onPress: () => {
-                            void handleInstallUpdate();
+                  description={
+                    isInstallingUpdate
+                      ? i18n.t('updates.downloadingDescription', {
+                          percent: Math.round(downloadProgress * 100),
+                        })
+                      : versionState
+                      ? i18n.t('updates.description', {
+                          version: versionState.latestVersion,
+                          notes: versionState.releaseNotes || i18n.t('updates.noNotes'),
+                        })
+                      : undefined
+                  }
+                  onClose={() => {
+                    if (!versionState?.forceUpdate && !isInstallingUpdate) {
+                      setVersionState(null);
+                    }
+                  }}
+                  actions={
+                    versionState?.forceUpdate
+                      ? [
+                          {
+                            label: i18n.t('updates.details'),
+                            tone: 'secondary',
+                            disabled: isInstallingUpdate,
+                            onPress: handleOpenDetails,
                           },
-                        },
-                      ]
-                    : [
-                        {
-                          label: i18n.t('updates.later'),
-                          tone: 'secondary',
-                          disabled: isInstallingUpdate,
-                          onPress: () => setVersionState(null),
-                        },
-                        {
-                          label: i18n.t('updates.details'),
-                          tone: 'secondary',
-                          disabled: isInstallingUpdate,
-                          onPress: handleOpenDetails,
-                        },
-                        {
-                          label: isInstallingUpdate ? i18n.t('updates.installingNow') : i18n.t('updates.installNow'),
-                          disabled: isInstallingUpdate,
-                          onPress: () => {
-                            void handleInstallUpdate();
+                          {
+                            label: isInstallingUpdate ? i18n.t('updates.installingNow') : i18n.t('updates.installNow'),
+                            disabled: isInstallingUpdate,
+                            onPress: () => {
+                              void handleInstallUpdate();
+                            },
                           },
-                        },
-                      ]
-                }
-              />
-            </>
-          </I18nextProvider>
-        </QueryClientProvider>
-      </SafeAreaProvider>
-    </AppErrorBoundary>
+                        ]
+                      : [
+                          {
+                            label: i18n.t('updates.later'),
+                            tone: 'secondary',
+                            disabled: isInstallingUpdate,
+                            onPress: () => setVersionState(null),
+                          },
+                          {
+                            label: i18n.t('updates.details'),
+                            tone: 'secondary',
+                            disabled: isInstallingUpdate,
+                            onPress: handleOpenDetails,
+                          },
+                          {
+                            label: isInstallingUpdate ? i18n.t('updates.installingNow') : i18n.t('updates.installNow'),
+                            disabled: isInstallingUpdate,
+                            onPress: () => {
+                              void handleInstallUpdate();
+                            },
+                          },
+                        ]
+                  }
+                />
+              </>
+            </I18nextProvider>
+          </QueryClientProvider>
+        </SafeAreaProvider>
+      </AppErrorBoundary>
+    </LinearGradient>
   );
 }
