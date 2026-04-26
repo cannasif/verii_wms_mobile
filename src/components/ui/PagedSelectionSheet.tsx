@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { COLORS, LAYOUT, RADII, SPACING } from '@/constants/theme';
@@ -12,6 +12,8 @@ interface PagedSelectionSheetProps<T> {
   title: string;
   placeholder: string;
   emptyText: string;
+  /** Rendered above the list (e.g. “All” option). */
+  listHeader?: React.ReactElement | null;
   selectedValue?: string;
   queryKey: readonly unknown[];
   fetchPage: (args: {
@@ -24,6 +26,13 @@ interface PagedSelectionSheetProps<T> {
   getLabel: (item: T) => string;
   onSelect: (item: T) => void;
   onClose: () => void;
+  /**
+   * Verildiğinde arama, klavye onayı beklemeden bu uzunlukta (trim sonrası) yazıldıktan sonra tetiklenir.
+   * Daha kısa metinde arama boşaltılır (ilk sayfa / tüm liste davranışı).
+   */
+  autoSearchMinLength?: number;
+  /** Otomatik arama için gecikme (ms). Varsayılan: 350 */
+  autoSearchDebounceMs?: number;
 }
 
 export function PagedSelectionSheet<T>({
@@ -31,6 +40,7 @@ export function PagedSelectionSheet<T>({
   title,
   placeholder,
   emptyText,
+  listHeader,
   selectedValue,
   queryKey,
   fetchPage,
@@ -38,10 +48,39 @@ export function PagedSelectionSheet<T>({
   getLabel,
   onSelect,
   onClose,
+  autoSearchMinLength,
+  autoSearchDebounceMs = 350,
 }: PagedSelectionSheetProps<T>): React.ReactElement {
   const { theme } = useTheme();
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushAutoSearch = (text: string) => {
+    if (autoSearchMinLength == null) return;
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+    const trimmed = text.trim();
+    setSearch(trimmed.length >= autoSearchMinLength ? trimmed : '');
+  };
+
+  useEffect(() => {
+    if (!visible || autoSearchMinLength == null) return;
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      debounceTimerRef.current = null;
+      const trimmed = searchInput.trim();
+      setSearch(trimmed.length >= autoSearchMinLength ? trimmed : '');
+    }, autoSearchDebounceMs);
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+    };
+  }, [searchInput, visible, autoSearchMinLength, autoSearchDebounceMs]);
 
   const query = useInfiniteQuery({
     queryKey: [...queryKey, search],
@@ -72,7 +111,14 @@ export function PagedSelectionSheet<T>({
           <TextInput
             value={searchInput}
             onChangeText={setSearchInput}
-            onSubmitEditing={() => setSearch(searchInput.trim())}
+            onSubmitEditing={() => {
+              if (autoSearchMinLength != null) {
+                flushAutoSearch(searchInput);
+              } else {
+                setSearch(searchInput.trim());
+              }
+            }}
+            returnKeyType='search'
             placeholder={placeholder}
             placeholderTextColor={theme.colors.textMuted}
             style={[styles.searchInput, { backgroundColor: theme.colors.surfaceStrong, color: theme.colors.text, borderColor: theme.colors.border }]}
@@ -86,6 +132,7 @@ export function PagedSelectionSheet<T>({
               data={items}
               keyExtractor={(item) => getValue(item)}
               keyboardShouldPersistTaps='handled'
+              ListHeaderComponent={listHeader ?? null}
               onEndReachedThreshold={0.3}
               onEndReached={() => {
                 if (query.hasNextPage && !query.isFetchingNextPage) {

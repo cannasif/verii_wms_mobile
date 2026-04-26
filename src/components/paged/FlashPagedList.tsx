@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { LAYOUT, SPACING } from '@/constants/theme';
 import { getPagedSummary } from '@/lib/paged';
@@ -26,6 +26,12 @@ interface FlashPagedListProps<TItem> {
   errorTitle?: string;
   errorDescription?: string;
   ListHeaderComponent?: React.ReactElement;
+  contentContainerStyle?: StyleProp<ViewStyle>;
+  ItemSeparatorComponent?: React.ComponentProps<typeof FlatList>['ItemSeparatorComponent'];
+  numColumns?: number;
+  columnWrapperStyle?: StyleProp<ViewStyle>;
+  /** Change this value to force-remount the FlatList (needed when numColumns changes). */
+  listKey?: string;
 }
 
 export function FlashPagedList<TItem>({
@@ -46,6 +52,11 @@ export function FlashPagedList<TItem>({
   errorTitle,
   errorDescription,
   ListHeaderComponent,
+  contentContainerStyle: contentContainerStyleProp,
+  ItemSeparatorComponent,
+  numColumns = 1,
+  columnWrapperStyle,
+  listKey,
 }: FlashPagedListProps<TItem>): React.ReactElement {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -85,8 +96,11 @@ export function FlashPagedList<TItem>({
 
   return (
     <FlatList
+      key={listKey}
       ref={listRef}
       data={data}
+      numColumns={numColumns}
+      columnWrapperStyle={numColumns > 1 ? columnWrapperStyle : undefined}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
       onEndReached={onLoadMore}
@@ -94,6 +108,7 @@ export function FlashPagedList<TItem>({
       onRefresh={() => void onRefresh()}
       refreshing={Boolean(isRefreshing)}
       ListHeaderComponent={ListHeaderComponent}
+      ItemSeparatorComponent={ItemSeparatorComponent}
       ListEmptyComponent={renderState}
       ListFooterComponent={
         <View style={styles.footer}>
@@ -105,7 +120,7 @@ export function FlashPagedList<TItem>({
           {isFetchingNextPage ? <ActivityIndicator color={theme.colors.primary} /> : null}
         </View>
       }
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, contentContainerStyleProp]}
       showsVerticalScrollIndicator={false}
     />
   );
@@ -113,7 +128,8 @@ export function FlashPagedList<TItem>({
 
 const styles = StyleSheet.create({
   content: {
-    padding: LAYOUT.screenPadding,
+    paddingHorizontal: 20,
+    paddingTop: SPACING.md,
     paddingBottom: LAYOUT.screenBottomPadding,
     gap: SPACING.sm,
     flexGrow: 1,

@@ -13,6 +13,10 @@ interface PagedListToolbarProps {
   onReset: () => void;
   isBusy?: boolean;
   activeFilterCount?: number;
+  /** Varsayılan: paged.searchPlaceholder */
+  searchPlaceholder?: string;
+  /** Özel kenarlık rengi — varsayılan: theme.colors.border */
+  accentBorderColor?: string;
 }
 
 export function PagedListToolbar({
@@ -23,19 +27,23 @@ export function PagedListToolbar({
   onReset,
   isBusy,
   activeFilterCount = 0,
+  searchPlaceholder,
+  accentBorderColor,
 }: PagedListToolbarProps): React.ReactElement {
   const { t } = useTranslation();
   const { theme } = useTheme();
+  const resolvedPlaceholder = searchPlaceholder ?? t('paged.searchPlaceholder');
+  const borderColor = accentBorderColor ?? theme.colors.border;
 
   return (
     <View style={styles.wrapper}>
-      <View style={[styles.searchShell, { borderColor: theme.colors.border, backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.04)' : 'rgba(255,255,255,0.04)' }]}>
-        <Search01Icon size={18} color={theme.colors.textMuted} />
+      <View style={[styles.searchShell, { borderColor, backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.04)' : 'rgba(255,255,255,0.04)' }]}>
+        <Search01Icon size={15} color={theme.colors.textMuted} />
         <TextInput
           value={value}
           onChangeText={onChange}
           onSubmitEditing={onSubmit}
-          placeholder={t('paged.searchPlaceholder')}
+          placeholder={resolvedPlaceholder}
           placeholderTextColor={theme.colors.textMuted}
           style={[styles.input, { color: theme.colors.text }]}
           returnKeyType="search"
@@ -46,8 +54,8 @@ export function PagedListToolbar({
       </View>
 
       <View style={styles.actionsRow}>
-        <Pressable onPress={onOpenFilters} style={({ pressed }) => [styles.secondaryAction, { borderColor: theme.colors.border, backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.02)' : 'rgba(255,255,255,0.03)' }, pressed && styles.pressed]}>
-          <FilterHorizontalIcon size={18} color={theme.colors.primary} />
+        <Pressable onPress={onOpenFilters} style={({ pressed }) => [styles.secondaryAction, { borderColor, backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.02)' : 'rgba(255,255,255,0.03)' }, pressed && styles.pressed]}>
+          <FilterHorizontalIcon size={15} color={theme.colors.primary} />
           <Text style={[styles.secondaryActionText, { color: theme.colors.textSecondary }]}>{t('paged.filters')}</Text>
           {activeFilterCount > 0 ? (
             <View style={[styles.badge, { backgroundColor: theme.colors.primary }]}>
@@ -56,8 +64,8 @@ export function PagedListToolbar({
           ) : null}
         </Pressable>
 
-        <Pressable onPress={onReset} disabled={isBusy} style={({ pressed }) => [styles.secondaryAction, { borderColor: theme.colors.border, backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.02)' : 'rgba(255,255,255,0.03)' }, pressed && styles.pressed, isBusy && styles.disabled]}>
-          <RefreshIcon size={18} color={theme.colors.textSecondary} />
+        <Pressable onPress={onReset} disabled={isBusy} style={({ pressed }) => [styles.secondaryAction, { borderColor, backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.02)' : 'rgba(255,255,255,0.03)' }, pressed && styles.pressed, isBusy && styles.disabled]}>
+          <RefreshIcon size={15} color={theme.colors.textSecondary} />
           <Text style={[styles.secondaryActionText, { color: theme.colors.textSecondary }]}>{t('paged.reset')}</Text>
         </Pressable>
       </View>
@@ -67,49 +75,49 @@ export function PagedListToolbar({
 
 const styles = StyleSheet.create({
   wrapper: {
-    gap: 12,
+    gap: 8,
   },
   searchShell: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
     borderWidth: 1,
-    borderRadius: 18,
-    paddingLeft: 14,
-    paddingRight: 8,
-    minHeight: 56,
+    borderRadius: 14,
+    paddingLeft: 12,
+    paddingRight: 6,
+    minHeight: 44,
   },
   input: {
     flex: 1,
-    fontSize: 15,
-    paddingVertical: 12,
+    fontSize: 13,
+    paddingVertical: 8,
   },
-  searchButton: { borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 },
-  searchButtonText: { fontWeight: '800' },
+  searchButton: { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7 },
+  searchButtonText: { fontWeight: '800', fontSize: 13 },
   actionsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   secondaryAction: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    minHeight: 48,
-    borderRadius: 16,
+    gap: 6,
+    minHeight: 38,
+    borderRadius: 12,
     borderWidth: 1,
   },
-  secondaryActionText: { fontWeight: '700' },
+  secondaryActionText: { fontWeight: '700', fontSize: 13 },
   badge: {
-    minWidth: 22,
-    height: 22,
-    paddingHorizontal: 6,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 11,
+    borderRadius: 9,
   },
-  badgeText: { fontWeight: '900', fontSize: 11 },
+  badgeText: { fontWeight: '900', fontSize: 10 },
   pressed: {
     opacity: 0.88,
   },
