@@ -49,14 +49,16 @@ export interface WarehouseStockSerialBalanceItem {
 export const warehouseStockBalanceFilters: readonly FilterColumnConfig[] = [
   { value: 'stockCode', type: 'text', labelKey: 'inventoryMobile.filters.stockCode' },
   { value: 'stockName', type: 'text', labelKey: 'inventoryMobile.filters.stockName' },
-  { value: 'warehouseName', type: 'text', labelKey: 'inventoryMobile.filters.warehouse' },
+  { value: 'warehouseName', type: 'text', labelKey: 'inventoryMobile.filters.warehouse', operators: ['Equals', 'Contains'] },
+  { value: 'WarehouseId', type: 'number', labelKey: 'inventoryMobile.filters.warehouseId', operators: ['Equals'] },
   { value: 'yapKodCode', type: 'text', labelKey: 'inventoryMobile.filters.yapKod' },
 ] as const;
 
 export const warehouseSerialBalanceFilters: readonly FilterColumnConfig[] = [
   { value: 'stockCode', type: 'text', labelKey: 'inventoryMobile.filters.stockCode' },
   { value: 'stockName', type: 'text', labelKey: 'inventoryMobile.filters.stockName' },
-  { value: 'warehouseName', type: 'text', labelKey: 'inventoryMobile.filters.warehouse' },
+  { value: 'warehouseName', type: 'text', labelKey: 'inventoryMobile.filters.warehouse', operators: ['Equals', 'Contains'] },
+  { value: 'WarehouseId', type: 'number', labelKey: 'inventoryMobile.filters.warehouseId', operators: ['Equals'] },
   { value: 'shelfCode', type: 'text', labelKey: 'inventoryMobile.filters.shelf' },
   { value: 'serialNo', type: 'text', labelKey: 'inventoryMobile.filters.serialNo' },
 ] as const;
