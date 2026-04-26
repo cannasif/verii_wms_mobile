@@ -1,11 +1,9 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { FormField } from '@/components/ui/FormField';
-import { FormSection } from '@/components/ui/FormSection';
-import { SelectorField } from '@/components/ui/SelectorField';
-import { Text } from '@/components/ui/Text';
-import { SPACING } from '@/constants/theme';
+import { FormField, FormPickerField } from '@/components/ui/FormField';
+import { styles as grStyles } from '@/features/goods-receipt-create/components/styles';
+import { ReceiptDateField } from '@/features/goods-receipt-create/components/ReceiptDateField';
 import { useTheme } from '@/providers/ThemeProvider';
 import type {
   CustomerOption,
@@ -42,148 +40,150 @@ interface Props {
   onOpenUsers: () => void;
 }
 
-export function WorkflowCreateStepOneSection(props: Props): React.ReactElement {
-  const { t } = useTranslation();
-  const { theme } = useTheme();
-
+function Infield({ children, theme }: { children: React.ReactNode; theme: { colors: { border: string; card: string } } }): React.ReactElement {
   return (
-    <FormSection>
-      <FormField
-        label={t('workflowCreate.fields.transferDate')}
-        required
-        value={props.form.transferDate}
-        onChangeText={(value) => props.onChange('transferDate', value)}
-        placeholder='YYYY-MM-DD'
-        error={props.stepOneErrors.transferDate}
-      />
-
-      <FormField
-        label={t('workflowCreate.fields.documentNo')}
-        required
-        value={props.form.documentNo}
-        onChangeText={(value) => props.onChange('documentNo', value)}
-        placeholder={t('workflowCreate.placeholders.documentNo')}
-        error={props.stepOneErrors.documentNo}
-      />
-
-      {(props.mode === 'order' || props.moduleKey === 'warehouse-outbound') && props.meta.requiresCustomer ? (
-        <LabeledSelector
-          label={t('workflowCreate.fields.customer')}
-          required
-          value={props.selectedCustomer ? `${props.selectedCustomer.cariIsim} (${props.selectedCustomer.cariKod})` : t('workflowCreate.placeholders.customer')}
-          onPress={props.onOpenCustomer}
-          error={props.stepOneErrors.customerId}
-          themeTextColor={theme.colors.textSecondary}
-          themeDangerColor={theme.colors.danger}
-        />
-      ) : null}
-
-      <LabeledSelector
-        label={t('workflowCreate.fields.project')}
-        value={props.selectedProject ? `${props.selectedProject.projeAciklama} (${props.selectedProject.projeKod})` : t('workflowCreate.placeholders.project')}
-        onPress={props.onOpenProject}
-        themeTextColor={theme.colors.textSecondary}
-        themeDangerColor={theme.colors.danger}
-      />
-
-      {props.meta.requiresOperationType ? (
-        <FormField
-          label={t('workflowCreate.fields.operationType')}
-          required
-          value={props.form.operationType}
-          onChangeText={(value) => props.onChange('operationType', value)}
-          placeholder={t('workflowCreate.placeholders.operationType')}
-          error={props.stepOneErrors.operationType}
-        />
-      ) : null}
-
-      {(props.meta.requiresSourceWarehouse || props.mode === 'free') ? (
-        <LabeledSelector
-          label={t('workflowCreate.fields.sourceWarehouse')}
-          required
-          value={props.selectedSourceWarehouse ? `${props.selectedSourceWarehouse.depoIsmi} (${String(props.selectedSourceWarehouse.depoKodu)})` : t('workflowCreate.placeholders.sourceWarehouse')}
-          onPress={props.onOpenSourceWarehouse}
-          error={props.stepOneErrors.sourceWarehouse}
-          themeTextColor={theme.colors.textSecondary}
-          themeDangerColor={theme.colors.danger}
-        />
-      ) : null}
-
-      {props.meta.requiresTargetWarehouse ? (
-        <LabeledSelector
-          label={t('workflowCreate.fields.targetWarehouse')}
-          required
-          value={props.selectedTargetWarehouse ? `${props.selectedTargetWarehouse.depoIsmi} (${String(props.selectedTargetWarehouse.depoKodu)})` : t('workflowCreate.placeholders.targetWarehouse')}
-          onPress={props.onOpenTargetWarehouse}
-          error={props.stepOneErrors.targetWarehouse}
-          themeTextColor={theme.colors.textSecondary}
-          themeDangerColor={theme.colors.danger}
-        />
-      ) : null}
-
-      <LabeledSelector
-        label={t('workflowCreate.fields.users')}
-        value={props.form.userIds.length > 0 ? t('workflowCreate.selectedUsers', { count: props.form.userIds.length }) : t('workflowCreate.placeholders.users')}
-        onPress={props.onOpenUsers}
-        themeTextColor={theme.colors.textSecondary}
-        themeDangerColor={theme.colors.danger}
-      />
-
-      <FormField
-        label={t('workflowCreate.fields.notes')}
-        value={props.form.notes}
-        onChangeText={(value) => props.onChange('notes', value)}
-        placeholder={t('workflowCreate.placeholders.notes')}
-        multiline
-        style={styles.textarea}
-      />
-    </FormSection>
-  );
-}
-
-function LabeledSelector({
-  label,
-  value,
-  onPress,
-  error,
-  required = false,
-  themeTextColor,
-  themeDangerColor,
-}: {
-  label: string;
-  value: string;
-  onPress: () => void;
-  error?: string;
-  required?: boolean;
-  themeTextColor: string;
-  themeDangerColor: string;
-}): React.ReactElement {
-  return (
-    <View style={styles.block}>
-      <Text style={[styles.label, { color: themeTextColor }]}>
-        {label}
-        {required ? ' *' : ''}
-      </Text>
-      <SelectorField value={value} onPress={onPress} />
-      {error ? <Text style={[styles.error, { color: themeDangerColor }]}>{error}</Text> : null}
+    <View
+      style={[
+        grStyles.infieldCard,
+        {
+          backgroundColor: theme.colors.card,
+          borderColor: theme.colors.border,
+        },
+      ]}
+    >
+      {children}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  block: {
-    gap: SPACING.xs - 2,
-  },
-  label: {
-    fontWeight: '800',
-  },
-  error: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  textarea: {
-    minHeight: 92,
-    textAlignVertical: 'top',
-    paddingTop: 14,
-  },
-});
+export function WorkflowCreateStepOneSection(props: Props): React.ReactElement {
+  const { t } = useTranslation();
+  const { theme } = useTheme();
+  const sectionStyle = [grStyles.infieldSection, { borderTopColor: theme.colors.border }];
+
+  return (
+    <Infield theme={theme}>
+      <ReceiptDateField
+        label={t('workflowCreate.fields.transferDate')}
+        required
+        value={props.form.transferDate}
+        onChange={(v) => props.onChange('transferDate', v)}
+        error={props.stepOneErrors.transferDate}
+      />
+      <View style={sectionStyle}>
+        <FormField
+          compact
+          label={t('workflowCreate.fields.documentNo')}
+          required
+          value={props.form.documentNo}
+          onChangeText={(value) => props.onChange('documentNo', value)}
+          placeholder={t('workflowCreate.placeholders.documentNo')}
+          error={props.stepOneErrors.documentNo}
+        />
+      </View>
+
+      {(props.mode === 'order' || props.moduleKey === 'warehouse-outbound') && props.meta.requiresCustomer ? (
+        <View style={sectionStyle}>
+          <FormPickerField
+            compact
+            label={t('workflowCreate.fields.customer')}
+            required
+            value={
+              props.selectedCustomer
+                ? `${props.selectedCustomer.cariIsim} (${props.selectedCustomer.cariKod})`
+                : t('workflowCreate.placeholders.customer')
+            }
+            onPress={props.onOpenCustomer}
+            error={props.stepOneErrors.customerId}
+          />
+        </View>
+      ) : null}
+
+      <View style={sectionStyle}>
+        <FormPickerField
+          compact
+          label={t('workflowCreate.fields.project')}
+          value={
+            props.selectedProject
+              ? `${props.selectedProject.projeAciklama} (${props.selectedProject.projeKod})`
+              : t('workflowCreate.placeholders.project')
+          }
+          onPress={props.onOpenProject}
+        />
+      </View>
+
+      {props.meta.requiresOperationType ? (
+        <View style={sectionStyle}>
+          <FormField
+            compact
+            label={t('workflowCreate.fields.operationType')}
+            required
+            value={props.form.operationType}
+            onChangeText={(value) => props.onChange('operationType', value)}
+            placeholder={t('workflowCreate.placeholders.operationType')}
+            error={props.stepOneErrors.operationType}
+          />
+        </View>
+      ) : null}
+
+      {props.meta.requiresSourceWarehouse || props.mode === 'free' ? (
+        <View style={sectionStyle}>
+          <FormPickerField
+            compact
+            label={t('workflowCreate.fields.sourceWarehouse')}
+            required
+            value={
+              props.selectedSourceWarehouse
+                ? `${props.selectedSourceWarehouse.depoIsmi} (${String(props.selectedSourceWarehouse.depoKodu)})`
+                : t('workflowCreate.placeholders.sourceWarehouse')
+            }
+            onPress={props.onOpenSourceWarehouse}
+            error={props.stepOneErrors.sourceWarehouse}
+          />
+        </View>
+      ) : null}
+
+      {props.meta.requiresTargetWarehouse ? (
+        <View style={sectionStyle}>
+          <FormPickerField
+            compact
+            label={t('workflowCreate.fields.targetWarehouse')}
+            required
+            value={
+              props.selectedTargetWarehouse
+                ? `${props.selectedTargetWarehouse.depoIsmi} (${String(props.selectedTargetWarehouse.depoKodu)})`
+                : t('workflowCreate.placeholders.targetWarehouse')
+            }
+            onPress={props.onOpenTargetWarehouse}
+            error={props.stepOneErrors.targetWarehouse}
+          />
+        </View>
+      ) : null}
+
+      <View style={sectionStyle}>
+        <FormPickerField
+          compact
+          label={t('workflowCreate.fields.users')}
+          value={
+            props.form.userIds.length > 0
+              ? t('workflowCreate.selectedUsers', { count: props.form.userIds.length })
+              : t('workflowCreate.placeholders.users')
+          }
+          onPress={props.onOpenUsers}
+        />
+      </View>
+
+      <View style={sectionStyle}>
+        <FormField
+          compact
+          label={t('workflowCreate.fields.notes')}
+          value={props.form.notes}
+          onChangeText={(value) => props.onChange('notes', value)}
+          placeholder={t('workflowCreate.placeholders.notes')}
+          multiline
+          style={grStyles.textarea as never}
+        />
+      </View>
+    </Infield>
+  );
+}

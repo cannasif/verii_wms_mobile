@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Tick01Icon } from 'hugeicons-react-native';
 import { useTranslation } from 'react-i18next';
 import { CameraView } from 'expo-camera';
 import { Button } from '@/components/ui/Button';
-import { FormSection } from '@/components/ui/FormSection';
 import { ScreenState } from '@/components/ui/ScreenState';
 import { Text } from '@/components/ui/Text';
+import { styles as grStyles } from '@/features/goods-receipt-create/components/styles';
 import { COLORS, RADII, SPACING } from '@/constants/theme';
 import { useTheme } from '@/providers/ThemeProvider';
 import type { WorkflowModuleConfig } from '@/features/operations/types/workflow';
@@ -13,6 +14,7 @@ import type {
   SelectedWorkflowItem,
   SelectedWorkflowOrderItem,
   SelectedWorkflowStockItem,
+  WorkflowOrder,
   WorkflowOrderItem,
 } from '../types';
 import { WorkflowSelectedItemCard } from './WorkflowSelectedItemCard';
@@ -23,10 +25,14 @@ interface Props {
   stockTab: 'stocks' | 'selected';
   setStockTab: (tab: 'stocks' | 'selected') => void;
   formCustomerId: string;
-  selectedOrder?: { siparisNo: string; customerName?: string } | null;
+  searchOrders: string;
+  setSearchOrders: (value: string) => void;
+  orders: WorkflowOrder[];
+  ordersLoading: boolean;
   activeOrderNumber: string | null;
-  onOpenOrderPicker: () => void;
+  onSelectOrder: (order: WorkflowOrder) => void;
   orderItems: WorkflowOrderItem[];
+  orderItemsLoading: boolean;
   selectedItems: SelectedWorkflowItem[];
   toggleOrderItem: (item: WorkflowOrderItem) => void;
   barcodeInput: string;
@@ -52,58 +58,139 @@ interface Props {
 
 export function WorkflowCreateStepTwoSection(props: Props): React.ReactElement {
   const { t } = useTranslation();
-  const { theme } = useTheme();
+  const { theme, mode } = useTheme();
+
+  const filteredOrders = useMemo(() => {
+    if (!props.searchOrders.trim()) {
+      return props.orders;
+    }
+    const q = props.searchOrders.toLocaleLowerCase('tr-TR');
+    return props.orders.filter((order) =>
+      `${order.siparisNo} ${order.customerName || ''} ${order.customerCode || ''} ${order.projectCode || ''} ${String(order.remainingForImport ?? '')}`
+        .toLocaleLowerCase('tr-TR')
+        .includes(q),
+    );
+  }, [props.orders, props.searchOrders]);
 
   return (
-    <FormSection>
+    <View style={{ gap: 12 }}>
       {props.mode === 'order' ? (
         <>
           {props.formCustomerId ? (
             <>
-              <View style={styles.barcodeCard}>
-                <Button title={t('workflowCreate.pickOrder')} onPress={props.onOpenOrderPicker} />
-                <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>{t('workflowCreate.searchPagedHint')}</Text>
-              </View>
-              {props.selectedOrder ? (
-                <Pressable
+              <View style={grStyles.orderSearchBlock}>
+                <View
                   style={[
-                    styles.rowCard,
+                    grStyles.orderSearchShell,
                     {
-                      borderColor: theme.colors.border,
-                      backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.02)' : 'rgba(255,255,255,0.03)',
+                      backgroundColor: theme.colors.surfaceStrong,
+                      borderColor: mode === 'light' ? 'rgba(2, 132, 199, 0.16)' : 'rgba(128, 176, 255, 0.2)',
                     },
-                    props.activeOrderNumber === props.selectedOrder.siparisNo ? [styles.rowCardActive, { borderColor: theme.colors.primary }] : null,
                   ]}
-                  onPress={props.onOpenOrderPicker}
                 >
-                  <Text style={styles.rowTitle}>{props.selectedOrder.siparisNo}</Text>
-                  <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>{props.selectedOrder.customerName}</Text>
-                </Pressable>
+                  <TextInput
+                    value={props.searchOrders}
+                    onChangeText={props.setSearchOrders}
+                    style={[grStyles.orderSearchField, { color: theme.colors.text }]}
+                    placeholder={t('workflowCreate.placeholders.orderSearch')}
+                    placeholderTextColor={theme.colors.inputPlaceholder}
+                  />
+                </View>
+              </View>
+              {props.ordersLoading ? (
+                <ScreenState tone="loading" title={t('common.loading')} compact />
+              ) : filteredOrders.length === 0 ? (
+                <ScreenState
+                  tone="empty"
+                  title={t('workflowCreate.noOrderSelected')}
+                  description={props.orders.length === 0 ? t('workflowCreate.noOrders') : t('workflowCreate.emptySearch')}
+                  compact
+                />
+              ) : (
+                filteredOrders.map((order) => {
+                  const isSel = props.activeOrderNumber === order.siparisNo;
+                  return (
+                    <Pressable
+                      key={order.siparisNo}
+                      onPress={() => props.onSelectOrder(order)}
+                      style={({ pressed }) => [
+                        grStyles.orderListCard,
+                        {
+                          backgroundColor: theme.colors.card,
+                          borderColor: isSel ? theme.colors.primaryStrong : theme.colors.border,
+                          borderWidth: isSel ? 1.5 : 1,
+                          marginTop: 4,
+                          opacity: pressed ? 0.92 : 1,
+                          shadowColor: '#0f172a',
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: isSel ? 0.1 : 0.05,
+                          shadowRadius: 6,
+                          elevation: 2,
+                        },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          grStyles.orderCheck,
+                          {
+                            borderColor: isSel ? theme.colors.accent : theme.colors.border,
+                            backgroundColor: isSel ? theme.colors.accent : 'transparent',
+                          },
+                        ]}
+                      >
+                        {isSel ? <Tick01Icon size={14} color="#fff" /> : null}
+                      </View>
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text style={[grStyles.orderListTitle, { color: theme.colors.text }]} numberOfLines={1}>
+                          {order.siparisNo}
+                        </Text>
+                        <Text style={[grStyles.orderListMeta, { color: theme.colors.textSecondary }]} numberOfLines={2}>
+                          {[order.customerName || order.customerCode, order.projectCode, order.remainingForImport].filter(Boolean).join(' · ')}
+                        </Text>
+                      </View>
+                      <Text style={{ color: theme.colors.textMuted, fontSize: 16 }}>›</Text>
+                    </Pressable>
+                  );
+                })
+              )}
+
+              {props.activeOrderNumber ? (
+                props.orderItemsLoading ? (
+                  <ScreenState tone="loading" title={t('common.loading')} compact />
+                ) : props.orderItems.length === 0 ? (
+                  <ScreenState tone="empty" title={t('workflowCreate.noItems')} compact />
+                ) : (
+                  props.orderItems.map((item) => {
+                    const selected = props.selectedItems.some(
+                      (selectedItem) => props.isOrderItem(selectedItem) && selectedItem.id === item.id,
+                    );
+                    return (
+                      <Pressable
+                        key={item.id}
+                        style={[
+                          styles.rowCard,
+                          {
+                            borderColor: theme.colors.border,
+                            backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.02)' : 'rgba(255,255,255,0.03)',
+                            marginTop: 8,
+                          },
+                          selected ? [styles.rowCardActive, { borderColor: theme.colors.primary }] : null,
+                        ]}
+                        onPress={() => props.toggleOrderItem(item)}
+                      >
+                        <Text style={styles.rowTitle}>{item.stockCode}</Text>
+                        <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>{item.stockName}</Text>
+                        <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>
+                          {t('workflowCreate.remainingQty', { value: item.remainingForImport })}
+                        </Text>
+                      </Pressable>
+                    );
+                  })
+                )
               ) : null}
-              {props.activeOrderNumber ? props.orderItems.map((item) => {
-                const selected = props.selectedItems.some((selectedItem) => props.isOrderItem(selectedItem) && selectedItem.id === item.id);
-                return (
-                  <Pressable
-                    key={item.id}
-                    style={[
-                      styles.rowCard,
-                      {
-                        borderColor: theme.colors.border,
-                        backgroundColor: theme.mode === 'light' ? 'rgba(15,23,42,0.02)' : 'rgba(255,255,255,0.03)',
-                      },
-                      selected ? [styles.rowCardActive, { borderColor: theme.colors.primary }] : null,
-                    ]}
-                    onPress={() => props.toggleOrderItem(item)}
-                  >
-                    <Text style={styles.rowTitle}>{item.stockCode}</Text>
-                    <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>{item.stockName}</Text>
-                    <Text style={[styles.rowMeta, { color: theme.colors.textSecondary }]}>{t('workflowCreate.remainingQty', { value: item.remainingForImport })}</Text>
-                  </Pressable>
-                );
-              }) : <ScreenState tone='empty' title={t('workflowCreate.noOrderSelected')} compact />}
             </>
           ) : (
-            <ScreenState tone='empty' title={t('workflowCreate.noCustomerSelected')} compact />
+            <ScreenState tone="empty" title={t('workflowCreate.noCustomerSelected')} compact />
           )}
         </>
       ) : (
@@ -174,7 +261,7 @@ export function WorkflowCreateStepTwoSection(props: Props): React.ReactElement {
           onPickYapKod={() => props.openYapKodPicker(item.id)}
         />
       ))}
-    </FormSection>
+    </View>
   );
 }
 

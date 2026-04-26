@@ -2,20 +2,22 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft01Icon } from 'hugeicons-react-native';
+import { ArrowLeft01Icon, ArrowRight01Icon } from 'hugeicons-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { styles as grStyles } from '@/features/goods-receipt-create/components/styles';
 import { Button } from '@/components/ui/Button';
 import { AppDialog } from '@/components/ui/AppDialog';
 import { ScreenState } from '@/components/ui/ScreenState';
 import { Text } from '@/components/ui/Text';
 import { PagedSelectionSheet } from '@/components/ui/PagedSelectionSheet';
-import { COLORS, LAYOUT, RADII, SPACING } from '@/constants/theme';
 import { normalizeError } from '@/lib/errors';
 import { showError, showWarning } from '@/lib/feedback';
 import { useTheme } from '@/providers/ThemeProvider';
 import { SelectionSheet } from '@/features/goods-receipt-create/components/SelectionSheet';
 import type { WorkflowModuleConfig } from '@/features/operations/types/workflow';
+import { WorkflowIcon } from '@/features/operations/screens/WorkflowIcon';
 import { WorkflowCreateStepOneSection } from './components/WorkflowCreateStepOneSection';
 import { WorkflowCreateStepTwoSection } from './components/WorkflowCreateStepTwoSection';
 import { workflowCreateApi } from './api';
@@ -107,7 +109,7 @@ export function WorkflowOrderCreateScreen({
   const [scannerLocked, setScannerLocked] = useState(false);
   const [customerSheetOpen, setCustomerSheetOpen] = useState(false);
   const [projectSheetOpen, setProjectSheetOpen] = useState(false);
-  const [orderSheetOpen, setOrderSheetOpen] = useState(false);
+  const [searchOrders, setSearchOrders] = useState('');
   const [warehouseSheetOpen, setWarehouseSheetOpen] = useState(false);
   const [userSheetOpen, setUserSheetOpen] = useState(false);
   const [stockSheetOpen, setStockSheetOpen] = useState(false);
@@ -143,6 +145,11 @@ export function WorkflowOrderCreateScreen({
   const yapKodTargetItem = selectedItems.find((item) => item.id === yapKodTargetItemId);
 
   const projectsQuery = useQuery({ queryKey: ['workflow-create', 'projects'], queryFn: ({ signal }) => workflowCreateApi.getProjects({ signal }) });
+  const ordersQuery = useQuery({
+    queryKey: ['workflow-create', module.key, 'orders', form.customerId, mode],
+    queryFn: ({ signal }) => workflowCreateApi.getOrdersByCustomer(module.key, form.customerId, { signal }),
+    enabled: mode === 'order' && Boolean(form.customerId),
+  });
   const itemsQuery = useQuery({
     queryKey: ['workflow-create', module.key, 'items', activeOrderNumber],
     queryFn: ({ signal }) => workflowCreateApi.getOrderItems(module.key, activeOrderNumber || '', { signal }),
@@ -171,6 +178,7 @@ export function WorkflowOrderCreateScreen({
   });
 
   const projects = projectsQuery.data ?? [];
+  const orders = ordersQuery.data ?? [];
   const orderItems = useMemo(() => (itemsQuery.data ?? []).map((item, index) => ({ ...item, id: buildOrderItemId(item, index) })), [itemsQuery.data]);
   const selectedProject = projects.find((item) => item.projeKod === form.projectCode);
 
@@ -219,6 +227,7 @@ export function WorkflowOrderCreateScreen({
     setStockTab('stocks');
     setActiveOrderNumber(null);
     setSelectedOrder(null);
+    setSearchOrders('');
     if (nextMode === 'free') {
       setForm((prev) => ({ ...prev, customerId: '', customerRefId: undefined }));
       setSelectedCustomer(null);
@@ -407,25 +416,77 @@ export function WorkflowOrderCreateScreen({
     setScannerOpen(false);
   };
 
+  const handleSelectOrder = (order: WorkflowOrder) => {
+    setSelectedOrder(order);
+    setActiveOrderNumber(order.siparisNo);
+  };
+
   return (
-    <ScrollView contentContainerStyle={styles.content}>
-      <Pressable onPress={() => router.back()} style={styles.backButton}>
-        <ArrowLeft01Icon size={18} color={theme.colors.text} />
-        <Text style={[styles.backText, { color: theme.colors.textSecondary }]}>{t('common.back')}</Text>
+    <ScrollView contentContainerStyle={[grStyles.content, { backgroundColor: theme.colors.background }]}>
+      <Pressable
+        onPress={() => router.back()}
+        style={({ pressed }) => [
+          grStyles.backButton,
+          currentStep === 2 ? [grStyles.backPill, grStyles.backPillStep2] : null,
+          { opacity: pressed ? 0.86 : 1 },
+        ]}
+        hitSlop={12}
+        accessibilityLabel={t('common.back')}
+      >
+        <ArrowLeft01Icon
+          size={24}
+          color={currentStep === 2 ? 'rgba(220, 38, 38, 0.88)' : theme.colors.danger}
+        />
       </Pressable>
 
-      <View style={[styles.hero, { backgroundColor: theme.colors.card, borderColor: module.accent + '44' }]}>
-        <Text style={styles.heroTitle}>{t(titleKey || module.createTitleKey)}</Text>
-        <Text style={[styles.heroSubtitle, { color: theme.colors.textSecondary }]}>{t(subtitleKey || 'workflowCreate.subtitle')}</Text>
-      </View>
+      <LinearGradient
+        colors={Array.from(theme.gradients.hero) as [string, string, string]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[grStyles.hero, { borderColor: theme.colors.navBorder }]}
+      >
+        <View style={grStyles.heroInfoRow}>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={[grStyles.infoTitle, { color: theme.colors.text }]}>{t(titleKey || module.createTitleKey)}</Text>
+            <Text style={[grStyles.infoShort, { color: theme.colors.textSecondary }]}>{t(module.createDescriptionKey)}</Text>
+            <Text style={[grStyles.infoLine2, { color: theme.colors.textSecondary }]}>{t(module.createInfoLine2Key)}</Text>
+          </View>
+          <View
+            style={[
+              grStyles.heroIconBtn,
+              {
+                backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                borderWidth: 1.5,
+                borderColor: 'rgba(14, 165, 233, 0.35)',
+              },
+            ]}
+          >
+            <WorkflowIcon module={module} color={module.accent} size={22} />
+          </View>
+        </View>
+      </LinearGradient>
 
       {meta.supportsFreeMode && !lockMode ? (
-        <View style={styles.modeRow}>
-          <Pressable style={[styles.modeChip, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceStrong }, mode === 'order' ? [styles.modeChipActive, { borderColor: theme.colors.primary }] : null]} onPress={() => toggleMode('order')}>
-            <Text style={styles.modeText}>{t('workflowCreate.modeOrder')}</Text>
+        <View style={grStyles.modeRow}>
+          <Pressable
+            style={[
+              grStyles.modeChip,
+              { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceStrong },
+              mode === 'order' ? [grStyles.modeChipActive, { borderColor: theme.colors.primary }] : null,
+            ]}
+            onPress={() => toggleMode('order')}
+          >
+            <Text style={[grStyles.modeChipText, { color: theme.colors.text }]}>{t('workflowCreate.modeOrder')}</Text>
           </Pressable>
-          <Pressable style={[styles.modeChip, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceStrong }, mode === 'free' ? [styles.modeChipActive, { borderColor: theme.colors.primary }] : null]} onPress={() => toggleMode('free')}>
-            <Text style={styles.modeText}>{freeModeLabel}</Text>
+          <Pressable
+            style={[
+              grStyles.modeChip,
+              { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceStrong },
+              mode === 'free' ? [grStyles.modeChipActive, { borderColor: theme.colors.primary }] : null,
+            ]}
+            onPress={() => toggleMode('free')}
+          >
+            <Text style={[grStyles.modeChipText, { color: theme.colors.text }]}>{freeModeLabel}</Text>
           </Pressable>
         </View>
       ) : null}
@@ -457,10 +518,14 @@ export function WorkflowOrderCreateScreen({
           stockTab={stockTab}
           setStockTab={setStockTab}
           formCustomerId={form.customerId}
-          selectedOrder={selectedOrder}
+          searchOrders={searchOrders}
+          setSearchOrders={setSearchOrders}
+          orders={orders}
+          ordersLoading={ordersQuery.isLoading}
           activeOrderNumber={activeOrderNumber}
-          onOpenOrderPicker={() => setOrderSheetOpen(true)}
+          onSelectOrder={handleSelectOrder}
           orderItems={orderItems}
+          orderItemsLoading={itemsQuery.isLoading}
           selectedItems={selectedItems}
           toggleOrderItem={toggleOrderItem}
           barcodeInput={barcodeInput}
@@ -491,16 +556,51 @@ export function WorkflowOrderCreateScreen({
         />
       )}
 
-      <View style={styles.footerRow}>
-        {currentStep === 1 ? (
-          <Button title={t('common.next')} onPress={() => { if (validateStepOne()) setCurrentStep(2); }} />
-        ) : (
-          <>
-            <Button title={t('common.previous')} onPress={() => setCurrentStep(1)} style={styles.footerButton} />
-            <Button title={t('common.save')} onPress={handleSave} loading={createMutation.isPending} style={styles.footerButton} />
-          </>
-        )}
-      </View>
+      {currentStep === 1 ? (
+        <Pressable
+          onPress={() => {
+            if (validateStepOne()) {
+              setCurrentStep(2);
+            }
+          }}
+          style={({ pressed }) => [{ width: '100%', opacity: pressed ? 0.92 : 1 }]}
+          accessibilityLabel={t('common.continue')}
+        >
+          <LinearGradient
+            colors={Array.from(theme.gradients.primary) as [string, string, string]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={grStyles.continueBtn}
+          >
+            <Text style={grStyles.continueText}>{t('common.continue')}</Text>
+            <ArrowRight01Icon size={20} color="#fff" />
+          </LinearGradient>
+        </Pressable>
+      ) : (
+        <View style={grStyles.footerRow}>
+          <Pressable
+            onPress={() => setCurrentStep(1)}
+            style={({ pressed }) => [
+              grStyles.footerBackBtn,
+              {
+                borderColor: 'rgba(239, 68, 68, 0.3)',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                opacity: pressed ? 0.9 : 1,
+              },
+            ]}
+            accessibilityLabel={t('common.back')}
+          >
+            <Text style={[styles.backFooterLabel, { color: 'rgba(220, 38, 38, 0.95)' }]}>{t('common.back')}</Text>
+          </Pressable>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Button
+              title={createMutation.isPending ? t('common.loading') : t('common.save')}
+              onPress={handleSave}
+              loading={createMutation.isPending}
+            />
+          </View>
+        </View>
+      )}
 
       <PagedSelectionSheet<CustomerOption>
         visible={customerSheetOpen}
@@ -519,6 +619,7 @@ export function WorkflowOrderCreateScreen({
           setSelectedItems([]);
           setActiveOrderNumber(null);
           setSelectedOrder(null);
+          setSearchOrders('');
         }}
         onClose={() => setCustomerSheetOpen(false)}
       />
@@ -534,25 +635,6 @@ export function WorkflowOrderCreateScreen({
         getLabel={(item) => item.projeAciklama + ' (' + item.projeKod + ')'}
         onSelect={(item) => setFormValue('projectCode', item.projeKod)}
         onClose={() => setProjectSheetOpen(false)}
-      />
-
-      <PagedSelectionSheet<WorkflowOrder>
-        visible={orderSheetOpen}
-        title={t('workflowCreate.pickOrder')}
-        placeholder={t('workflowCreate.placeholders.orderSearch')}
-        emptyText={t('workflowCreate.noOrderSelected')}
-        selectedValue={activeOrderNumber ?? undefined}
-        queryKey={['workflow-create', module.key, 'order-picker', form.customerId]}
-        fetchPage={({ pageNumber, pageSize, search, signal }) =>
-          workflowCreateApi.getOrdersByCustomerClientSliced(module.key, form.customerId, pageNumber, pageSize, search, { signal })
-        }
-        getValue={(item) => item.siparisNo}
-        getLabel={(item) => `${item.siparisNo} · ${item.customerName || item.customerCode || '-'}${item.projectCode ? ` · ${item.projectCode}` : ''}`}
-        onSelect={(item) => {
-          setSelectedOrder(item);
-          setActiveOrderNumber(item.siparisNo);
-        }}
-        onClose={() => setOrderSheetOpen(false)}
       />
 
       <PagedSelectionSheet<WarehouseOption>
@@ -657,16 +739,5 @@ function randomId(): string {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: LAYOUT.screenPadding, paddingBottom: 140, gap: SPACING.md },
-  backButton: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' },
-  backText: { color: COLORS.textSecondary, fontWeight: '700' },
-  hero: { padding: SPACING.lg, borderRadius: RADII.xl, backgroundColor: COLORS.card, borderWidth: 1, gap: SPACING.xs },
-  heroTitle: { fontSize: 24, fontWeight: '900' },
-  heroSubtitle: { color: COLORS.textSecondary, lineHeight: 20 },
-  modeRow: { flexDirection: 'row', gap: 10 },
-  modeChip: { flex: 1, minHeight: 44, borderRadius: RADII.md, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.surfaceStrong },
-  modeChipActive: { borderColor: COLORS.primary, backgroundColor: 'rgba(56,189,248,0.12)' },
-  modeText: { fontWeight: '800' },
-  footerRow: { flexDirection: 'row', gap: 12 },
-  footerButton: { flex: 1 },
+  backFooterLabel: { fontWeight: '800' },
 });
