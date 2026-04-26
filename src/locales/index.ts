@@ -14,6 +14,9 @@ export type SupportedLanguage = keyof typeof resources;
 
 const supportedLanguages = Object.keys(resources) as SupportedLanguage[];
 
+/** Dil seçici gibi yerlerde sabit sıra */
+export const SUPPORTED_LANGUAGES: readonly SupportedLanguage[] = supportedLanguages;
+
 void i18n.use(initReactI18next).init({
   compatibilityJSON: 'v4',
   lng: 'tr',
