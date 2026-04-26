@@ -8,6 +8,12 @@ const statuses: OperationStatus[] = ['Pending', 'InProgress', 'Completed', 'Crit
 const zones = ['A-01', 'A-07', 'B-14', 'C-02', 'D-19', 'E-03'];
 const assignees = ['Can Nasif', 'Ayşe K.', 'Mert A.', 'Zehra D.', 'Okan T.'];
 
+function createAbortError(): Error {
+  const error = new Error('Aborted');
+  error.name = 'AbortError';
+  return error;
+}
+
 function getSeedTitle(index: number): string {
   if (index % 3 === 0) {
     return i18n.t('screens.operations.task1Title');
@@ -112,7 +118,7 @@ export const operationsApi = {
         'abort',
         () => {
           clearTimeout(timer);
-          reject(new DOMException('Aborted', 'AbortError'));
+          reject(createAbortError());
         },
         { once: true },
       );

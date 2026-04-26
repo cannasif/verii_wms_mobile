@@ -88,6 +88,7 @@ export interface WorkflowModuleConfig {
   subtitleKey: string;
   createTitleKey: string;
   createDescriptionKey: string;
+  createInfoLine2Key: string;
   assignedTitleKey: string;
   assignedDescriptionKey: string;
   approvalTitleKey: string;
