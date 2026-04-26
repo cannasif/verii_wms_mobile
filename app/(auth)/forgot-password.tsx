@@ -49,7 +49,7 @@ export default function ForgotPasswordScreen(): React.ReactElement {
   );
 
   return (
-    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.screen, { backgroundColor: 'transparent' }]}>
       <Pressable onPress={() => router.back()} style={styles.backButton}>
         <ArrowLeft01Icon size={18} color={theme.colors.text} />
         <Text style={[styles.backText, { color: theme.colors.textSecondary }]}>{t('common.back')}</Text>
