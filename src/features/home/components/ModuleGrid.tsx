@@ -7,10 +7,19 @@ import { COLORS } from '@/constants/theme';
 import { useTheme } from '@/providers/ThemeProvider';
 import { HOME_MODULES } from '../constants/modules';
 
+// Distinct colored icon background per quick action
+const PALETTES = [
+  { dark: { bg: 'rgba(14,165,233,0.15)', border: 'rgba(14,165,233,0.30)', icon: '#0ea5e9' }, light: { bg: 'rgba(2,132,199,0.09)',  border: 'rgba(2,132,199,0.24)',  icon: '#0284c7' } },
+  { dark: { bg: 'rgba(249,115,22,0.14)', border: 'rgba(249,115,22,0.28)', icon: '#f97316' }, light: { bg: 'rgba(234,88,12,0.09)',  border: 'rgba(234,88,12,0.24)',  icon: '#ea580c' } },
+  { dark: { bg: 'rgba(20,184,166,0.14)', border: 'rgba(20,184,166,0.28)', icon: '#14b8a6' }, light: { bg: 'rgba(13,148,136,0.09)', border: 'rgba(13,148,136,0.24)', icon: '#0d9488' } },
+  { dark: { bg: 'rgba(139,92,246,0.14)', border: 'rgba(139,92,246,0.28)', icon: '#8b5cf6' }, light: { bg: 'rgba(124,58,237,0.09)', border: 'rgba(124,58,237,0.24)', icon: '#7c3aed' } },
+] as const;
+
 export function ModuleGrid(): React.ReactElement {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const router = useRouter();
+  const isDark = theme.mode === 'dark';
 
   const routeMap: Record<(typeof HOME_MODULES)[number]['key'], string> = {
     receipt: '/(tabs)/flows/goods-receipt',
@@ -20,14 +29,24 @@ export function ModuleGrid(): React.ReactElement {
   };
 
   return (
-    <View style={styles.grid}>
-      {HOME_MODULES.map((item) => {
+    <View style={styles.row}>
+      {HOME_MODULES.map((item, index) => {
         const Icon = item.icon;
+        const p = PALETTES[index % PALETTES.length];
+        const tone = isDark ? p.dark : p.light;
         return (
-          <Pressable key={item.key} style={[styles.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]} onPress={() => router.push(routeMap[item.key] as never)}>
-            <View style={[styles.iconWrap, { backgroundColor: theme.mode === 'light' ? 'rgba(59,130,246,0.10)' : 'rgba(56,189,248,0.1)' }]}><Icon size={22} color={theme.colors.primary} /></View>
-            <Text style={styles.title}>{t(item.titleKey)}</Text>
-            <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{t(item.subtitleKey)}</Text>
+          <Pressable
+            key={item.key}
+            style={styles.item}
+            android_ripple={{ color: tone.border, borderless: true }}
+            onPress={() => router.push(routeMap[item.key] as never)}
+          >
+            <View style={[styles.iconBox, { backgroundColor: tone.bg, borderColor: tone.border }]}>
+              <Icon size={22} color={tone.icon} />
+            </View>
+            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+              {t(item.titleKey)}
+            </Text>
           </Pressable>
         );
       })}
@@ -36,9 +55,29 @@ export function ModuleGrid(): React.ReactElement {
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  card: { width: '48%', backgroundColor: COLORS.card, borderRadius: 22, borderWidth: 1, borderColor: COLORS.border, padding: 16, minHeight: 148, gap: 12 },
-  iconWrap: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(56,189,248,0.1)' },
-  title: { fontSize: 16, fontWeight: '800' },
-  subtitle: { color: COLORS.textSecondary, lineHeight: 18 }
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  item: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 7,
+    paddingVertical: 4,
+  },
+  iconBox: {
+    width: 54,
+    height: 54,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 15,
+    color: COLORS.textSecondary,
+  },
 });
