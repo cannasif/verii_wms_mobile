@@ -18,7 +18,16 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.v3rii.veriiwmsmobile",
-      "buildNumber": "6"
+      "buildNumber": "6",
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": [
+          "tel",
+          "mailto",
+          "https",
+          "http",
+          "sms"
+        ]
+      }
     },
     "android": {
       "versionCode": 6,
@@ -37,9 +46,10 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "VERII WMS barkod okutmak için kameraya erişmek istiyor."
+          "cameraPermission": "VERII WMS barkod okutma ve belge tarama için kameraya erişmek istiyor."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ]
   }
 }
