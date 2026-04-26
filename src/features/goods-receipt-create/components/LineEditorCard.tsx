@@ -1,16 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
+import { PackageIcon, Tick01Icon } from 'hugeicons-react-native';
 import { useTranslation } from 'react-i18next';
 import { SelectorField } from '@/components/ui/SelectorField';
 import { Text } from '@/components/ui/Text';
 import { SPACING } from '@/constants/theme';
 import { useTheme } from '@/providers/ThemeProvider';
-import type {
-  GoodsReceiptFormValues,
-  ReceiptMode,
-  SelectedOrderItem,
-  SelectedStockItem,
-} from '../types';
+import type { ReceiptMode, SelectedOrderItem, SelectedStockItem } from '../types';
 import { styles } from './styles';
 
 interface LineEditorCardProps {
@@ -19,6 +15,7 @@ interface LineEditorCardProps {
   code: string;
   unit: string;
   baseQuantity: number;
+  orderNo?: string;
   selectedItem?: SelectedOrderItem | SelectedStockItem;
   onToggle: () => void;
   onChange: (updates: Partial<SelectedOrderItem> & Partial<SelectedStockItem>) => void;
@@ -34,6 +31,7 @@ export function LineEditorCard({
   code,
   unit,
   baseQuantity,
+  orderNo,
   selectedItem,
   onToggle,
   onChange,
@@ -104,44 +102,76 @@ export function LineEditorCard({
       style={[
         styles.lineCard,
         {
-          backgroundColor: theme.colors.backgroundSecondary,
+          backgroundColor: theme.colors.card,
           borderColor: selectedItem ? theme.colors.accent : theme.colors.border,
+          shadowColor: '#0f172a',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.06,
+          shadowRadius: 4,
+          elevation: 1,
         },
         selectedItem ? styles.lineCardActive : null,
       ]}
     >
-      <View style={styles.lineHeader}>
-        <View style={{ flex: 1, gap: SPACING.xs - 2 }}>
-          <Text style={styles.lineTitle}>{title}</Text>
-          <Text style={[styles.lineMeta, { color: theme.colors.textSecondary }]}>{code}</Text>
-          {baseQuantity > 0 ? (
-            <Text style={[styles.lineMeta, { color: theme.colors.textSecondary }]}>{t('goodsReceiptMobile.baseQuantity', { value: baseQuantity, unit })}</Text>
-          ) : null}
-        </View>
+      <View style={styles.lineTopRow}>
         <Pressable
-          onPress={() => setIsExpanded((prev) => !prev)}
-          style={[styles.expandButton, { backgroundColor: theme.colors.card }]}
+          onPress={onToggle}
+          style={[
+            styles.orderCheck,
+            { borderColor: selectedItem ? theme.colors.accent : theme.colors.border },
+            selectedItem ? { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent } : { backgroundColor: 'transparent' },
+          ]}
+          accessibilityLabel={t('goodsReceiptMobile.toggleLine')}
         >
-          <Text style={styles.expandButtonText}>{isExpanded ? '-' : '+'}</Text>
+          {selectedItem ? <Tick01Icon size={14} color="#fff" /> : null}
         </Pressable>
+        <View style={[styles.lineIconBox, { backgroundColor: 'rgba(56, 189, 248, 0.14)', borderColor: 'rgba(56, 189, 248, 0.3)' }]}>
+          <PackageIcon size={20} color={theme.colors.primaryStrong} />
+        </View>
+        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+          <Text style={styles.lineTitle} numberOfLines={2}>
+            {title}
+          </Text>
+          {mode === 'order' && orderNo ? (
+            <Text style={[styles.lineMeta, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+              {t('goodsReceiptMobile.lineOrderRef', { value: orderNo })}
+            </Text>
+          ) : null}
+          <Text style={[styles.lineMeta, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+            {code}
+            {baseQuantity > 0 ? ` · ${t('goodsReceiptMobile.baseQuantity', { value: baseQuantity, unit })}` : null}
+          </Text>
+        </View>
+        <View style={{ alignItems: 'flex-end', gap: 0 }}>
+          <TextInput
+            value={quantityInput}
+            onChangeText={updateQuantity}
+            onBlur={handleQuantityBlur}
+            style={[styles.lineQtyInput, { color: theme.colors.primaryStrong, borderBottomWidth: 1, borderBottomColor: 'rgba(56, 189, 248, 0.35)' }]}
+            keyboardType="decimal-pad"
+            placeholder="0"
+            placeholderTextColor={theme.colors.inputPlaceholder}
+          />
+          <Text style={[styles.lineAdet, { color: theme.colors.textSecondary }]}>{t('goodsReceiptMobile.unitAdet')}</Text>
+        </View>
       </View>
 
-      <Pressable
-        style={[styles.warehousePicker, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
-        onPress={onPickWarehouse}
-      >
-        <Text style={styles.warehousePickerText}>{selectedWarehouseLabel}</Text>
-      </Pressable>
-
-      <TextInput
-        value={quantityInput}
-        onChangeText={updateQuantity}
-        onBlur={handleQuantityBlur}
-        style={[styles.input, { backgroundColor: theme.colors.surfaceStrong, color: theme.colors.text }]}
-        keyboardType='decimal-pad'
-        placeholder={t('goodsReceiptMobile.quantityPlaceholder')}
-        placeholderTextColor={theme.colors.inputPlaceholder}
-      />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
+        <Pressable
+          style={[{ flex: 1, minWidth: 0 }, styles.warehousePicker, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
+          onPress={onPickWarehouse}
+        >
+          <Text style={styles.warehousePickerText} numberOfLines={1}>
+            {selectedWarehouseLabel}
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setIsExpanded((prev) => !prev)}
+          style={[styles.expandButton, { backgroundColor: theme.colors.card, borderColor: theme.colors.border, borderWidth: 1 }]}
+        >
+          <Text style={styles.expandButtonText}>{isExpanded ? '−' : '+'}</Text>
+        </Pressable>
+      </View>
 
       {isExpanded ? (
         <View style={styles.detailGrid}>

@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { ArrowLeft01Icon, ArrowRight01Icon, Camera01Icon, PackageIcon } from 'hugeicons-react-native';
 import { useTranslation } from 'react-i18next';
 import { AppDialog } from '@/components/ui/AppDialog';
 import { Button } from '@/components/ui/Button';
@@ -12,11 +14,13 @@ import { showError, showWarning } from '@/lib/feedback';
 import { useTheme } from '@/providers/ThemeProvider';
 import { useAuthStore } from '@/store/auth';
 import { goodsReceiptCreateApi } from './api';
+import { GoodsReceiptDocumentScanModal } from './components/GoodsReceiptDocumentScanModal';
 import { SelectionSheet } from './components/SelectionSheet';
 import { Step1BasicInfo } from './components/Step1BasicInfo';
 import { Step2OrderSelection } from './components/Step2OrderSelection';
 import { Step2StockSelection } from './components/Step2StockSelection';
 import { styles } from './components/styles';
+import type { GoodsReceiptScanDraft } from './services/document-scan';
 import type {
   Customer,
   GoodsReceiptFormValues,
@@ -87,7 +91,7 @@ export function GoodsReceiptCreateScreen({
   const [showYapKodSheet, setShowYapKodSheet] = useState(false);
   const [showCustomerSheet, setShowCustomerSheet] = useState(false);
   const [showProjectSheet, setShowProjectSheet] = useState(false);
-  const [showOrderSheet, setShowOrderSheet] = useState(false);
+  const [searchOrders, setSearchOrders] = useState('');
   const [stepOneErrors, setStepOneErrors] = useState<{
     receiptDate?: string;
     documentNo?: string;
@@ -106,6 +110,7 @@ export function GoodsReceiptCreateScreen({
   });
   const [selectedItems, setSelectedItems] = useState<SelectedReceiptItem[]>([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showDocumentScanModal, setShowDocumentScanModal] = useState(false);
   const yapKodTargetItem = selectedItems.find((item) => item.id === yapKodTargetItemId);
 
   const projectsQuery = useQuery({
@@ -116,7 +121,7 @@ export function GoodsReceiptCreateScreen({
   const ordersQuery = useQuery({
     queryKey: ['goods-receipt-create', 'orders', form.customerId],
     queryFn: ({ signal }) => goodsReceiptCreateApi.getOrdersByCustomer(form.customerId, { signal }),
-    enabled: receiptMode === 'stock' && Boolean(form.customerId),
+    enabled: Boolean(form.customerId),
   });
 
   const orderItemsQuery = useQuery({
@@ -153,7 +158,6 @@ export function GoodsReceiptCreateScreen({
   });
 
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const selectedProject = projects.find((item) => item.projeKod === form.projectCode) ?? null;
 
   const mappedOrderItems = useMemo(() => {
@@ -226,6 +230,25 @@ export function GoodsReceiptCreateScreen({
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const applyGoodsReceiptScanDraft = (draft: GoodsReceiptScanDraft): void => {
+    if (draft.isInvoice !== undefined) {
+      setFormValue('isInvoice', draft.isInvoice);
+    }
+    if (draft.receiptDate) {
+      setFormValue('receiptDate', draft.receiptDate);
+    }
+    if (draft.documentNo != null && draft.documentNo !== '') {
+      setFormValue('documentNo', draft.documentNo);
+    }
+    if (draft.notes != null) {
+      setFormValue('notes', draft.notes);
+    }
+    if (draft.projectCode != null) {
+      setFormValue('projectCode', draft.projectCode);
+    }
+    // Müşteri: API cari kodu döndüğünde burada setFormValue + müşteri sheet ile eşleştirme eklenebilir.
+  };
+
   const resetStepTwoState = (): void => {
     setSelectedItems([]);
     setActiveOrderNumber(null);
@@ -233,9 +256,9 @@ export function GoodsReceiptCreateScreen({
     setStockTab('stocks');
     setWarehouseTarget(null);
     setSearchItems('');
+    setSearchOrders('');
     setSearchStocks('');
     setSearchSelectedStocks('');
-    setSelectedOrder(null);
   };
 
   const selectMode = (mode: ReceiptMode): void => {
@@ -370,21 +393,30 @@ export function GoodsReceiptCreateScreen({
     setStepOneErrors(nextErrors);
 
     if (Object.keys(nextErrors).length > 0) {
-      showWarning(t('goodsReceiptMobile.stepOneValidation'));
       return false;
     }
 
     return true;
   };
 
-  const handleNext = (): void => {
-    if (currentStep === 1 && !validateStepOne()) {
-      return;
+  const goToStep = (next: StepKey): void => {
+    if (next === 2) {
+      if (!validateStepOne()) {
+        return;
+      }
     }
+    setCurrentStep(next);
+  };
 
+  const handleNext = (): void => {
     if (currentStep === 1) {
-      setCurrentStep(2);
+      goToStep(2);
     }
+  };
+
+  const handleSelectOrder = (order: Order): void => {
+    setActiveOrderNumber(order.siparisNo);
+    setOrderTab('items');
   };
 
   const handleSave = (): void => {
@@ -414,36 +446,147 @@ export function GoodsReceiptCreateScreen({
   }, [selectedItems, warehouseTarget]);
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
-      <Pressable onPress={() => router.back()} style={styles.backButton}>
-        <Text style={[styles.backText, { color: theme.colors.textSecondary }]}>{t('common.back')}</Text>
+    <ScrollView contentContainerStyle={[styles.content, { backgroundColor: theme.colors.background }]}>
+      <Pressable
+        onPress={() => router.back()}
+        style={({ pressed }) => [
+          styles.backButton,
+          currentStep === 2 ? [styles.backPill, styles.backPillStep2] : null,
+          { opacity: pressed ? 0.86 : 1 },
+        ]}
+        hitSlop={12}
+        accessibilityLabel={t('common.back')}
+      >
+        <ArrowLeft01Icon
+          size={24}
+          color={currentStep === 2 ? 'rgba(220, 38, 38, 0.88)' : theme.colors.danger}
+        />
       </Pressable>
 
-      <View style={[styles.hero, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-        <Text style={[styles.heroEyebrow, { color: theme.colors.accent }]}>{t('workflow.goodsReceipt.title')}</Text>
-        <Text style={styles.title}>{t('goodsReceiptMobile.title')}</Text>
-        <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{t('goodsReceiptMobile.subtitle')}</Text>
-      </View>
+      <LinearGradient
+        colors={Array.from(theme.gradients.hero) as [string, string, string]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.hero, { borderColor: theme.colors.navBorder }]}
+      >
+        <View style={styles.heroInfoRow}>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={[styles.infoTitle, { color: theme.colors.text }]}>{t('goodsReceiptMobile.infoTitle')}</Text>
+            <Text style={[styles.infoShort, { color: theme.colors.textSecondary }]}>{t('goodsReceiptMobile.infoShort')}</Text>
+            <Text style={[styles.infoLine2, { color: theme.colors.textSecondary }]}>{t('goodsReceiptMobile.infoShortLine2')}</Text>
+          </View>
+          <View
+            style={[
+              styles.heroIconBtn,
+              {
+                backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                borderWidth: 1.5,
+                borderColor: 'rgba(14, 165, 233, 0.35)',
+              },
+            ]}
+          >
+            <PackageIcon size={22} color={theme.colors.primaryStrong} />
+          </View>
+        </View>
+      </LinearGradient>
+
+      {currentStep === 1 ? (
+        <Pressable
+          onPress={() => setShowDocumentScanModal(true)}
+          style={({ pressed }) => [
+            styles.documentScanRow,
+            {
+              borderColor: theme.colors.border,
+              backgroundColor: theme.colors.surfaceStrong,
+              opacity: pressed ? 0.92 : 1,
+            },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={t('goodsReceiptMobile.documentScanRowLabel')}
+        >
+          <View
+            style={[
+              styles.documentScanIconWrap,
+              {
+                borderColor: 'rgba(14, 165, 233, 0.35)',
+                backgroundColor: 'rgba(56, 189, 248, 0.12)',
+              },
+            ]}
+          >
+            <Camera01Icon size={22} color={theme.colors.primaryStrong} />
+          </View>
+          <View style={styles.documentScanRowText}>
+            <Text style={[styles.documentScanRowTitle, { color: theme.colors.text }]}>{t('goodsReceiptMobile.documentScanRowLabel')}</Text>
+            <Text style={[styles.documentScanRowMeta, { color: theme.colors.textMuted }]} numberOfLines={2}>
+              {t('goodsReceiptMobile.documentScanRowHint')}
+            </Text>
+          </View>
+          <Text style={{ color: theme.colors.textMuted, fontSize: 18 }}>›</Text>
+        </Pressable>
+      ) : null}
 
       {!lockMode ? (
         <View style={styles.modeRow}>
-          <Pressable style={[styles.modeChip, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceStrong }, receiptMode === 'order' ? [styles.modeChipActive, { borderColor: theme.colors.primary }] : null]} onPress={() => selectMode('order')}>
+          <Pressable
+            style={[
+              styles.modeChip,
+              { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceStrong },
+              receiptMode === 'order' ? [styles.modeChipActive, { borderColor: theme.colors.primary }] : null,
+            ]}
+            onPress={() => selectMode('order')}
+          >
             <Text style={styles.modeChipText}>{t('goodsReceiptMobile.modeOrder')}</Text>
           </Pressable>
-          <Pressable style={[styles.modeChip, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceStrong }, receiptMode === 'stock' ? [styles.modeChipActive, { borderColor: theme.colors.primary }] : null]} onPress={() => selectMode('stock')}>
+          <Pressable
+            style={[
+              styles.modeChip,
+              { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceStrong },
+              receiptMode === 'stock' ? [styles.modeChipActive, { borderColor: theme.colors.primary }] : null,
+            ]}
+            onPress={() => selectMode('stock')}
+          >
             <Text style={styles.modeChipText}>{t('goodsReceiptMobile.modeStock')}</Text>
           </Pressable>
         </View>
       ) : null}
 
-      <View style={styles.stepIndicatorRow}>
-        {[1, 2].map((step) => (
-          <View key={step} style={[styles.stepIndicator, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceStrong }, currentStep === step ? [styles.stepIndicatorActive, { borderColor: theme.colors.accent }] : null]}>
-            <Text style={styles.stepIndicatorText}>
-              {step === 1 ? t('goodsReceiptMobile.stepOneTitle') : t('goodsReceiptMobile.stepTwoTitle')}
-            </Text>
-          </View>
-        ))}
+      <View style={[styles.mainTabBar, { backgroundColor: theme.colors.backgroundSecondary }]}>
+        <Pressable
+          style={[
+            styles.mainTab,
+            currentStep === 1
+              ? { backgroundColor: theme.colors.card, borderWidth: 1, borderColor: theme.colors.border }
+              : null,
+          ]}
+          onPress={() => goToStep(1)}
+        >
+          <Text
+            style={[
+              styles.mainTabText,
+              { color: currentStep === 1 ? theme.colors.primaryStrong : theme.colors.textMuted },
+            ]}
+          >
+            {t('goodsReceiptMobile.mainTabBasic')}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.mainTab,
+            currentStep === 2
+              ? { backgroundColor: theme.colors.card, borderWidth: 1, borderColor: theme.colors.border }
+              : null,
+          ]}
+          onPress={() => goToStep(2)}
+        >
+          <Text
+            style={[
+              styles.mainTabText,
+              { color: currentStep === 2 ? theme.colors.primaryStrong : theme.colors.textMuted },
+            ]}
+          >
+            {t('goodsReceiptMobile.mainTabLines')}
+          </Text>
+        </Pressable>
       </View>
 
       {currentStep === 1 ? (
@@ -462,9 +605,12 @@ export function GoodsReceiptCreateScreen({
           setOrderTab={setOrderTab}
           searchItems={searchItems}
           setSearchItems={setSearchItems}
-          selectedOrder={selectedOrder}
+          searchOrders={searchOrders}
+          setSearchOrders={setSearchOrders}
+          orders={orders}
+          ordersLoading={ordersQuery.isLoading}
           activeOrderNumber={activeOrderNumber}
-          onOpenOrderPicker={() => setShowOrderSheet(true)}
+          onSelectOrder={handleSelectOrder}
           orderItemsLoading={orderItemsQuery.isLoading}
           filteredOrderItems={filteredOrderItems}
           selectedItems={selectedItems.filter(isSelectedOrderItem)}
@@ -501,24 +647,47 @@ export function GoodsReceiptCreateScreen({
         />
       )}
 
-      <View style={styles.footerRow}>
-        {currentStep === 2 ? (
-          <Pressable style={styles.secondaryButton} onPress={() => setCurrentStep(1)}>
-            <Text style={styles.secondaryButtonText}>{t('common.back')}</Text>
+      {currentStep === 1 ? (
+        <Pressable
+          onPress={handleNext}
+          style={({ pressed }) => [{ width: '100%', opacity: pressed ? 0.92 : 1 }]}
+          accessibilityLabel={t('common.continue')}
+        >
+          <LinearGradient
+            colors={Array.from(theme.gradients.primary) as [string, string, string]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.continueBtn}
+          >
+            <Text style={styles.continueText}>{t('common.continue')}</Text>
+            <ArrowRight01Icon size={20} color="#fff" />
+          </LinearGradient>
+        </Pressable>
+      ) : (
+        <View style={styles.footerRow}>
+          <Pressable
+            onPress={() => goToStep(1)}
+            style={({ pressed }) => [
+              styles.footerBackBtn,
+              {
+                borderColor: 'rgba(239, 68, 68, 0.3)',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                opacity: pressed ? 0.9 : 1,
+              },
+            ]}
+            accessibilityLabel={t('common.back')}
+          >
+            <Text style={[styles.secondaryButtonText, { color: 'rgba(220, 38, 38, 0.95)' }]}>{t('common.back')}</Text>
           </Pressable>
-        ) : (
-          <View />
-        )}
-        {currentStep === 1 ? (
-          <Button title={t('common.continue')} onPress={handleNext} />
-        ) : (
-          <Button
-            title={createMutation.isPending ? t('common.loading') : t('goodsReceiptMobile.save')}
-            onPress={handleSave}
-            loading={createMutation.isPending}
-          />
-        )}
-      </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Button
+              title={createMutation.isPending ? t('common.loading') : t('goodsReceiptMobile.save')}
+              onPress={handleSave}
+              loading={createMutation.isPending}
+            />
+          </View>
+        </View>
+      )}
 
       <PagedSelectionSheet<Customer>
         visible={showCustomerSheet}
@@ -553,26 +722,6 @@ export function GoodsReceiptCreateScreen({
         getLabel={(item) => `${item.projeAciklama} (${item.projeKod})`}
         onSelect={(item) => setFormValue('projectCode', item.projeKod)}
         onClose={() => setShowProjectSheet(false)}
-      />
-
-      <PagedSelectionSheet<Order>
-        visible={showOrderSheet}
-        title={t('goodsReceiptMobile.pickOrder')}
-        placeholder={t('goodsReceiptMobile.searchOrders')}
-        emptyText={t('goodsReceiptMobile.noOrderSelectedTitle')}
-        selectedValue={activeOrderNumber ?? undefined}
-        queryKey={['goods-receipt-create', 'order-picker', form.customerId]}
-        fetchPage={({ pageNumber, pageSize, search, signal }) =>
-          goodsReceiptCreateApi.getOrdersByCustomerClientSliced(form.customerId, pageNumber, pageSize, search, { signal })
-        }
-        getValue={(item) => item.siparisNo}
-        getLabel={(item) => `${item.siparisNo} · ${item.customerName || item.customerCode || '-'}${item.projectCode ? ` · ${item.projectCode}` : ''}`}
-        onSelect={(item) => {
-          setSelectedOrder(item);
-          setActiveOrderNumber(item.siparisNo);
-          setOrderTab('items');
-        }}
-        onClose={() => setShowOrderSheet(false)}
       />
 
       <PagedSelectionSheet<Warehouse>
@@ -632,6 +781,12 @@ export function GoodsReceiptCreateScreen({
           setYapKodTargetItemId(null);
           setShowYapKodSheet(false);
         }}
+      />
+
+      <GoodsReceiptDocumentScanModal
+        visible={showDocumentScanModal}
+        onClose={() => setShowDocumentScanModal(false)}
+        onApplyDraft={applyGoodsReceiptScanDraft}
       />
 
       <AppDialog
