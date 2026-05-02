@@ -11,6 +11,7 @@ import { AppDialog } from '@/components/ui/AppDialog';
 import { AppErrorBoundary } from '@/components/system/AppErrorBoundary';
 import { initializeApiBaseUrl } from '@/constants/config';
 import { showError } from '@/lib/feedback';
+import { realtimeNotifications } from '@/lib/realtime-notifications';
 import i18n from '@/locales';
 import {
   cleanupCachedApkUpdates,
@@ -41,6 +42,7 @@ export default function RootLayout(): React.ReactElement {
 function RootLayoutContent(): React.ReactElement {
   const hydrate = useAuthStore((state) => state.hydrate);
   const isHydrated = useAuthStore((state) => state.isHydrated);
+  const token = useAuthStore((state) => state.token);
   const { theme } = useTheme();
   const [versionState, setVersionState] = useState<VersionCheckResult | null>(null);
   const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);
@@ -91,9 +93,31 @@ function RootLayoutContent(): React.ReactElement {
       return;
     }
 
+    if (!token) {
+      void realtimeNotifications.disconnect();
+      return;
+    }
+
+    void realtimeNotifications.connect().catch((error) => {
+      console.error('[RootLayout] Failed to connect realtime notifications:', error);
+    });
+  }, [isHydrated, token]);
+
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') {
         void runVersionCheck();
+        if (useAuthStore.getState().token) {
+          void realtimeNotifications.connect().catch((error) => {
+            console.error('[RootLayout] Failed to reconnect realtime notifications:', error);
+          });
+        }
+      } else {
+        void realtimeNotifications.disconnect();
       }
     });
 
