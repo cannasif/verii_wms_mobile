@@ -38,6 +38,7 @@ export function TransferCollectionScreen({
       completeSuccessTitleKey='transferCollection.completeSuccessTitle'
       completeSuccessTextKey='transferCollection.completeSuccessText'
       viewCollectedKey='transferCollection.viewCollected'
+      updatePermissionCode='wms.transfer.update'
       api={transferCollectionApi}
       heroEyebrow={t('workflow.transfer.title')}
     />

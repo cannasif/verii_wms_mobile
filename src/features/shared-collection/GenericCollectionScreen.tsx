@@ -7,10 +7,12 @@ import { AppDialog } from '@/components/ui/AppDialog';
 import { Button } from '@/components/ui/Button';
 import { ScreenState } from '@/components/ui/ScreenState';
 import { Text } from '@/components/ui/Text';
+import { hasPermission } from '@/features/auth/utils/permissions';
 import { COLORS, LAYOUT, RADII, SPACING } from '@/constants/theme';
 import { normalizeError } from '@/lib/errors';
 import { showError, showMessage, showWarning } from '@/lib/feedback';
 import { useTheme } from '@/providers/ThemeProvider';
+import { useAuthStore } from '@/store/auth';
 import { CollectionHeaderInfoCard } from './CollectionHeaderInfoCard';
 import type { CollectionApi, CollectionHeaderInfo, CollectionLine, CollectionStockBarcode } from './types';
 import type { BarcodeMatchCandidate } from '@/services/barcode-types';
@@ -52,6 +54,7 @@ interface GenericCollectionScreenProps {
   completeSuccessTextKey: string;
   api: CollectionApi;
   heroEyebrow: string;
+  updatePermissionCode: string;
   viewCollectedKey?: string;
   headerInfo?: CollectionHeaderInfo | null;
 }
@@ -81,12 +84,15 @@ export function GenericCollectionScreen({
   completeSuccessTextKey,
   api,
   heroEyebrow,
+  updatePermissionCode,
   viewCollectedKey,
   headerInfo,
 }: GenericCollectionScreenProps): React.ReactElement {
   const { t } = useTranslation();
   const { theme } = useTheme();
+  const permissions = useAuthStore((state) => state.permissions);
   const queryClient = useQueryClient();
+  const canUpdate = hasPermission(permissions, updatePermissionCode);
   const [barcodeInput, setBarcodeInput] = useState('');
   const [searchedBarcode, setSearchedBarcode] = useState('');
   const [quantity, setQuantity] = useState('1');
@@ -218,6 +224,11 @@ export function GenericCollectionScreen({
   };
 
   const handleCollect = (): void => {
+    if (!canUpdate) {
+      showWarning(t('workflow.updatePermissionDeniedDescription', { title: t(titleKey) }));
+      return;
+    }
+
     if (!selectedBarcode) {
       showWarning(t(selectStockKey));
       return;
@@ -256,6 +267,14 @@ export function GenericCollectionScreen({
       </View>
 
       <CollectionHeaderInfoCard info={headerInfo} />
+
+      {!canUpdate ? (
+        <ScreenState
+          tone="error"
+          title={t('workflow.updatePermissionDeniedTitle')}
+          description={t('workflow.updatePermissionDeniedDescription', { title: t(titleKey) })}
+        />
+      ) : null}
 
       {viewCollectedKey ? (
         <Pressable style={[styles.linkButton, { borderColor: theme.colors.primary }]} onPress={() => router.push(`/(tabs)/flows/${modulePath}/collected/${headerId}` as never)}>
@@ -322,6 +341,7 @@ export function GenericCollectionScreen({
             <Button
               title={addBarcodeMutation.isPending ? t('common.loading') : t(collectButtonKey)}
               onPress={handleCollect}
+              disabled={!canUpdate}
               loading={addBarcodeMutation.isPending}
             />
           </View>
@@ -368,7 +388,14 @@ export function GenericCollectionScreen({
 
       <Button
         title={completeMutation.isPending ? t('common.loading') : t(completeButtonKey)}
-        onPress={() => completeMutation.mutate()}
+        onPress={() => {
+          if (!canUpdate) {
+            showWarning(t('workflow.updatePermissionDeniedDescription', { title: t(titleKey) }));
+            return;
+          }
+          completeMutation.mutate();
+        }}
+        disabled={!canUpdate}
         loading={completeMutation.isPending}
       />
 

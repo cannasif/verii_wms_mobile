@@ -39,6 +39,7 @@ export function ShipmentCollectionScreen({
       completeSuccessTitleKey='shipmentCollection.completeSuccessTitle'
       completeSuccessTextKey='shipmentCollection.completeSuccessText'
       viewCollectedKey='shipmentCollection.viewCollected'
+      updatePermissionCode='wms.shipment.update'
       api={shipmentCollectionApi}
       heroEyebrow={t('workflow.shipment.title')}
     />

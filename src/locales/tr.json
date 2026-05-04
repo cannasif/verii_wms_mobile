@@ -463,6 +463,8 @@
     "detailHide": "Gizle",
     "permissionDeniedTitle": "Yetki gerekli",
     "permissionDeniedDescription": "{{title}} detayını görüntüleme yetkiniz yok.",
+    "updatePermissionDeniedTitle": "İşlem yetkisi gerekli",
+    "updatePermissionDeniedDescription": "{{title}} üzerinde işlem yapma yetkiniz yok.",
     "listHeroTitle": "{{title}} listesi",
     "listHeroText": "{{count}} kaydı arama, filtre ve sonsuz scroll ile yönetin.",
     "listEmptyTitle": "{{title}} kaydı bulunamadı",

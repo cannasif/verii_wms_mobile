@@ -11,11 +11,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
+import { ScreenState } from '@/components/ui/ScreenState';
 import { Text } from '@/components/ui/Text';
+import { hasPermission } from '@/features/auth/utils/permissions';
 import { COLORS } from '@/constants/theme';
 import { normalizeError } from '@/lib/errors';
 import { showError, showMessage, showWarning } from '@/lib/feedback';
 import { useTheme } from '@/providers/ThemeProvider';
+import { useAuthStore } from '@/store/auth';
 import { goodsReceiptCollectionApi } from './api';
 import { CollectionHeaderInfoCard } from '@/features/shared-collection/CollectionHeaderInfoCard';
 import type { AssignedGrLine, StokBarcodeDto } from './types';
@@ -43,7 +46,9 @@ export function GoodsReceiptCollectionScreen({
 }): React.ReactElement {
   const { t } = useTranslation();
   const { theme } = useTheme();
+  const permissions = useAuthStore((state) => state.permissions);
   const queryClient = useQueryClient();
+  const canUpdate = hasPermission(permissions, 'wms.goods-receipt.update');
   const [barcodeInput, setBarcodeInput] = useState('');
   const [searchedBarcode, setSearchedBarcode] = useState('');
   const [quantity, setQuantity] = useState('1');
@@ -188,6 +193,11 @@ export function GoodsReceiptCollectionScreen({
   };
 
   const handleCollect = (): void => {
+    if (!canUpdate) {
+      showWarning(t('workflow.updatePermissionDeniedDescription', { title: t('goodsReceiptCollection.title') }));
+      return;
+    }
+
     const stock = selectedStock || selectedBarcode;
     const collectQuantity = parseDecimalInput(quantity);
 
@@ -231,6 +241,14 @@ export function GoodsReceiptCollectionScreen({
       </View>
 
       <CollectionHeaderInfoCard info={headerInfo} />
+
+      {!canUpdate ? (
+        <ScreenState
+          tone="error"
+          title={t('workflow.updatePermissionDeniedTitle')}
+          description={t('workflow.updatePermissionDeniedDescription', { title: t('goodsReceiptCollection.title') })}
+        />
+      ) : null}
 
       <Pressable style={[styles.linkButton, { borderColor: theme.colors.primary }]} onPress={() => router.push(`/(tabs)/flows/goods-receipt/collected/${headerId}` as never)}>
         <Text style={[styles.linkButtonText, { color: theme.colors.primary }]}>{t('goodsReceiptCollection.viewCollected')}</Text>
@@ -306,6 +324,7 @@ export function GoodsReceiptCollectionScreen({
             <Button
               title={addBarcodeMutation.isPending ? t('common.loading') : t('goodsReceiptCollection.collectButton')}
               onPress={handleCollect}
+              disabled={!canUpdate}
               loading={addBarcodeMutation.isPending}
             />
           </View>
@@ -335,7 +354,14 @@ export function GoodsReceiptCollectionScreen({
 
       <Button
         title={completeMutation.isPending ? t('common.loading') : t('goodsReceiptCollection.completeButton')}
-        onPress={() => completeMutation.mutate()}
+        onPress={() => {
+          if (!canUpdate) {
+            showWarning(t('workflow.updatePermissionDeniedDescription', { title: t('goodsReceiptCollection.title') }));
+            return;
+          }
+          completeMutation.mutate();
+        }}
+        disabled={!canUpdate}
         loading={completeMutation.isPending}
       />
     </ScrollView>

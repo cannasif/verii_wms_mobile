@@ -462,6 +462,8 @@
     "detailHide": "Hide",
     "permissionDeniedTitle": "Permission required",
     "permissionDeniedDescription": "You do not have permission to view {{title}} details.",
+    "updatePermissionDeniedTitle": "Action permission required",
+    "updatePermissionDeniedDescription": "You do not have permission to operate on {{title}}.",
     "listHeroTitle": "{{title}} list",
     "listHeroText": "Manage {{count}} records with search, advanced filters, and infinite scroll.",
     "listEmptyTitle": "No {{title}} records found",

@@ -46,6 +46,7 @@ export function SubcontractingCollectionScreen({
       completeSuccessTitleKey={`${prefix}.completeSuccessTitle`}
       completeSuccessTextKey={`${prefix}.completeSuccessText`}
       viewCollectedKey={`${prefix}.viewCollected`}
+      updatePermissionCode={kind === 'issue' ? 'wms.subcontracting.issue.update' : 'wms.subcontracting.receipt.update'}
       api={api}
       heroEyebrow={heroEyebrow}
     />

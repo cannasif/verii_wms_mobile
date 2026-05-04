@@ -9,11 +9,14 @@ import { PagedFilterModal } from '@/components/paged/PagedFilterModal';
 import { FlashPagedList } from '@/components/paged/FlashPagedList';
 import { PagedListToolbar } from '@/components/paged/PagedListToolbar';
 import { AppDialog } from '@/components/ui/AppDialog';
+import { ScreenState } from '@/components/ui/ScreenState';
 import { Text } from '@/components/ui/Text';
+import { hasPermission } from '@/features/auth/utils/permissions';
 import { COLORS, RADII, SPACING } from '@/constants/theme';
 import { formatLocalizedDate } from '@/lib/formatters';
 import { showError, showSuccess } from '@/lib/feedback';
 import { useTheme } from '@/providers/ThemeProvider';
+import { useAuthStore } from '@/store/auth';
 import { workflowApi } from '../api/workflow-api';
 import { useWorkflowHeaders } from '../hooks/useWorkflowHeaders';
 import type { WorkflowAssignedItem, WorkflowHeaderMode, WorkflowModuleConfig } from '../types/workflow';
@@ -62,7 +65,9 @@ export function WorkflowHeaderListScreen({
 }): React.ReactElement {
   const { t } = useTranslation();
   const { theme } = useTheme();
+  const permissions = useAuthStore((state) => state.permissions);
   const queryClient = useQueryClient();
+  const canApprove = hasPermission(permissions, module.updatePermissionCode);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [approvalDialog, setApprovalDialog] = useState<{
     item: WorkflowAssignedItem;
@@ -148,7 +153,7 @@ export function WorkflowHeaderListScreen({
       <View style={styles.headerContent}>
         <ScreenHeader title={titleText} subtitle={descriptionText} />
 
-        <View style={[styles.heroCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+      <View style={[styles.heroCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
           <View style={[styles.heroBadge, { backgroundColor: `${module.accent}20` }]}>
             <WorkflowIcon module={module} color={module.accent} size={20} />
           </View>
@@ -157,6 +162,15 @@ export function WorkflowHeaderListScreen({
             <Text style={[styles.heroText, { color: theme.colors.textSecondary }]}>{t(module.titleKey)}</Text>
           </View>
         </View>
+
+        {mode === 'approval' && !canApprove ? (
+          <ScreenState
+            tone="error"
+            title={t('workflow.updatePermissionDeniedTitle')}
+            description={t('workflow.updatePermissionDeniedDescription', { title: t(module.titleKey) })}
+            compact
+          />
+        ) : null}
 
         <PagedListToolbar
           value={searchInput}
@@ -262,14 +276,14 @@ export function WorkflowHeaderListScreen({
           <Pressable
             style={[styles.approvalButtonSecondary, { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceStrong }]}
             onPress={() => setApprovalDialog({ item, approved: false })}
-            disabled={approvalMutation.isPending}
+            disabled={approvalMutation.isPending || !canApprove}
           >
             <Text style={[styles.approvalButtonSecondaryText, { color: theme.colors.text }]}>{t('workflow.approvalReject')}</Text>
           </Pressable>
           <Pressable
             style={[styles.approvalButtonPrimary, { backgroundColor: theme.colors.primaryStrong }]}
             onPress={() => setApprovalDialog({ item, approved: true })}
-            disabled={approvalMutation.isPending}
+            disabled={approvalMutation.isPending || !canApprove}
           >
             <Text style={styles.approvalButtonPrimaryText}>{t('workflow.approvalApprove')}</Text>
           </Pressable>
@@ -348,7 +362,7 @@ export function WorkflowHeaderListScreen({
                 ? t('workflow.approvalApprove')
                 : t('workflow.approvalReject'),
             onPress: () => {
-              if (!approvalDialog) {
+              if (!approvalDialog || !canApprove) {
                 return;
               }
 
