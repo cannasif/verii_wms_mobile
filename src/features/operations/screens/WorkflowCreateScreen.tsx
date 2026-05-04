@@ -5,7 +5,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft01Icon, ArrowRight01Icon, CheckmarkCircle02Icon } from 'hugeicons-react-native';
 import { useTranslation } from 'react-i18next';
 import { Text } from '@/components/ui/Text';
+import { ScreenState } from '@/components/ui/ScreenState';
 import { styles as grStyles } from '@/features/goods-receipt-create/components/styles';
+import { hasPermission } from '@/features/auth/utils/permissions';
 import { useTheme } from '@/providers/ThemeProvider';
 import { useAuthStore } from '@/store/auth';
 import type { WorkflowModuleConfig } from '../types/workflow';
@@ -16,6 +18,8 @@ export function WorkflowCreateScreen({ module }: { module: WorkflowModuleConfig 
   const { theme } = useTheme();
   const user = useAuthStore((state) => state.user);
   const branch = useAuthStore((state) => state.branch);
+  const permissions = useAuthStore((state) => state.permissions);
+  const canCreate = hasPermission(permissions, module.createPermissionCode);
 
   return (
     <ScrollView contentContainerStyle={[grStyles.content, { backgroundColor: theme.colors.background }]}>
@@ -54,6 +58,16 @@ export function WorkflowCreateScreen({ module }: { module: WorkflowModuleConfig 
           </View>
         </View>
       </LinearGradient>
+
+      {!canCreate ? (
+        <ScreenState
+          tone="error"
+          title={t('workflow.create.permissionDeniedTitle')}
+          description={t('workflow.create.permissionDeniedDescription', {
+            title: t(module.createTitleKey),
+          })}
+        />
+      ) : null}
 
       <View style={styles.gap12}>
         <View style={styles.infoRow}>
@@ -115,6 +129,7 @@ export function WorkflowCreateScreen({ module }: { module: WorkflowModuleConfig 
         <View style={{ flex: 1, minWidth: 0 }}>
           <Pressable
             onPress={() => router.push(`/(tabs)/flows/${module.key}/list` as never)}
+            disabled={!canCreate}
             style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1 }]}
           >
             <LinearGradient

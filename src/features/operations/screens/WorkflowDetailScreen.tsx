@@ -7,10 +7,12 @@ import { useTranslation } from 'react-i18next';
 import { Text } from '@/components/ui/Text';
 import { ScreenState } from '@/components/ui/ScreenState';
 import { SectionCard } from '@/components/ui/SectionCard';
+import { hasPermission } from '@/features/auth/utils/permissions';
 import { COLORS, LAYOUT, RADII, SPACING } from '@/constants/theme';
 import { CollectionHeaderInfoCard } from '@/features/shared-collection/CollectionHeaderInfoCard';
 import { formatLocalizedDateTime, formatLocalizedNumber } from '@/lib/formatters';
 import { useTheme } from '@/providers/ThemeProvider';
+import { useAuthStore } from '@/store/auth';
 import { workflowApi } from '../api/workflow-api';
 import type {
   WorkflowHeaderDetail,
@@ -99,38 +101,41 @@ export function WorkflowDetailScreen({
 }): React.ReactElement {
   const { t } = useTranslation();
   const { theme } = useTheme();
+  const permissions = useAuthStore((state) => state.permissions);
   const [expandedOrderLines, setExpandedOrderLines] = useState<Record<number, boolean>>({});
   const [expandedImportLines, setExpandedImportLines] = useState<Record<number, boolean>>({});
+  const canView = hasPermission(permissions, module.viewPermissionCode);
+  const canUpdate = hasPermission(permissions, module.updatePermissionCode);
 
   const headerQuery = useQuery({
     queryKey: ['workflow-detail', module.key, 'header', headerId],
     queryFn: ({ signal }) => workflowApi.getHeaderDetail(module.key, headerId, { signal }),
-    enabled: headerId > 0,
+    enabled: canView && headerId > 0,
   });
 
   const linesQuery = useQuery({
     queryKey: ['workflow-detail', module.key, 'order-lines', headerId],
     queryFn: ({ signal }) => workflowApi.getHeaderLines(module.key, headerId, { signal }),
-    enabled: headerId > 0,
+    enabled: canView && headerId > 0,
   });
 
   const importLinesQuery = useQuery({
     queryKey: ['workflow-detail', module.key, 'import-lines', headerId],
     queryFn: ({ signal }) => workflowApi.getHeaderImportLines(module.key, headerId, { signal }),
-    enabled: headerId > 0,
+    enabled: canView && headerId > 0,
   });
 
   const terminalLinesQuery = useQuery({
     queryKey: ['workflow-detail', module.key, 'terminal-lines', headerId],
     queryFn: ({ signal }) => workflowApi.getTerminalLines(module.key, headerId, { signal }),
-    enabled: headerId > 0,
+    enabled: canView && headerId > 0,
   });
 
   const lineSerialQueries = useQueries({
     queries: (linesQuery.data ?? []).map((line) => ({
       queryKey: ['workflow-detail', module.key, 'line-serials', line.id],
       queryFn: ({ signal }: { signal?: AbortSignal }) => workflowApi.getLineSerials(module.key, line.id, { signal }),
-      enabled: linesQuery.isSuccess,
+      enabled: canView && linesQuery.isSuccess,
     })),
   });
 
@@ -140,7 +145,7 @@ export function WorkflowDetailScreen({
       .map((line) => ({
         queryKey: ['workflow-detail', module.key, 'route', line.routeId],
         queryFn: ({ signal }: { signal?: AbortSignal }) => workflowApi.getRouteById(module.key, line.routeId!, { signal }),
-        enabled: importLinesQuery.isSuccess,
+        enabled: canView && importLinesQuery.isSuccess,
       })),
   });
 
@@ -227,7 +232,18 @@ export function WorkflowDetailScreen({
         <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{t('workflow.detailText')}</Text>
       </View>
 
-      {supportsPackageMove(module.key) ? (
+      {!canView ? (
+        <SectionCard>
+          <ScreenState
+            tone="error"
+            title={t('workflow.permissionDeniedTitle')}
+            description={t('workflow.permissionDeniedDescription', { title: t(module.titleKey) })}
+            compact
+          />
+        </SectionCard>
+      ) : null}
+
+      {supportsPackageMove(module.key) && canUpdate ? (
         <SectionCard title={t('packageMoveMobile.cardTitle')} subtitle={t('packageMoveMobile.cardSubtitle')}>
           <Pressable
             onPress={() =>
@@ -248,43 +264,46 @@ export function WorkflowDetailScreen({
         </SectionCard>
       ) : null}
 
-      <CollectionHeaderInfoCard info={info} />
+      {canView ? <CollectionHeaderInfoCard info={info} /> : null}
 
-      <SectionCard
-        title={t('workflow.detailPeopleTitle')}
-        subtitle={t('workflow.detailPeopleText')}
-      >
-        <View style={styles.childCard}>
-          <DetailMeta label={t('workflow.detailCreatedBy')} value={creatorLabel} />
-          <DetailMeta
-            label={t('workflow.detailCreatedAt')}
-            value={headerQuery.data?.createdDate ? formatLocalizedDateTime(headerQuery.data.createdDate) : undefined}
-          />
-          <DetailMeta label={t('workflow.detailBranchCode')} value={headerQuery.data?.branchCode} />
-        </View>
-        <View style={styles.childList}>
-          {assignedUsers.length === 0 ? (
-            <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>{t('workflow.detailAssignedUsersEmpty')}</Text>
-          ) : (
-            assignedUsers.map((user, index) => (
-              <View key={`${user}-${index}`} style={styles.childCard}>
-                <DetailMeta label={t('workflow.detailAssignedUser')} value={user} />
-              </View>
-            ))
-          )}
-        </View>
-      </SectionCard>
+      {canView ? (
+        <SectionCard
+          title={t('workflow.detailPeopleTitle')}
+          subtitle={t('workflow.detailPeopleText')}
+        >
+          <View style={styles.childCard}>
+            <DetailMeta label={t('workflow.detailCreatedBy')} value={creatorLabel} />
+            <DetailMeta
+              label={t('workflow.detailCreatedAt')}
+              value={headerQuery.data?.createdDate ? formatLocalizedDateTime(headerQuery.data.createdDate) : undefined}
+            />
+            <DetailMeta label={t('workflow.detailBranchCode')} value={headerQuery.data?.branchCode} />
+          </View>
+          <View style={styles.childList}>
+            {assignedUsers.length === 0 ? (
+              <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>{t('workflow.detailAssignedUsersEmpty')}</Text>
+            ) : (
+              assignedUsers.map((user, index) => (
+                <View key={`${user}-${index}`} style={styles.childCard}>
+                  <DetailMeta label={t('workflow.detailAssignedUser')} value={user} />
+                </View>
+              ))
+            )}
+          </View>
+        </SectionCard>
+      ) : null}
 
-      {isLoading ? (
-        <SectionCard>
-          <ScreenState tone='loading' title={t('common.loading')} compact />
-        </SectionCard>
-      ) : isError ? (
-        <SectionCard>
-          <ScreenState tone='error' title={t('common.error')} description={errorMessage} compact />
-        </SectionCard>
-      ) : (
-        <>
+      {canView ? (
+        isLoading ? (
+          <SectionCard>
+            <ScreenState tone='loading' title={t('common.loading')} compact />
+          </SectionCard>
+        ) : isError ? (
+          <SectionCard>
+            <ScreenState tone='error' title={t('common.error')} description={errorMessage} compact />
+          </SectionCard>
+        ) : (
+          <>
           <SectionCard
             title={t('workflow.detailOrderLinesTitle')}
             subtitle={t('workflow.detailOrderLinesCount', { count: orderLines.length })}
@@ -383,8 +402,9 @@ export function WorkflowDetailScreen({
               })
             )}
           </SectionCard>
-        </>
-      )}
+          </>
+        )
+      ) : null}
     </ScrollView>
   );
 }

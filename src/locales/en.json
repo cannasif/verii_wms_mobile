@@ -460,6 +460,8 @@
     "detailBranchCode": "Branch code",
     "detailShow": "Show",
     "detailHide": "Hide",
+    "permissionDeniedTitle": "Permission required",
+    "permissionDeniedDescription": "You do not have permission to view {{title}} details.",
     "listHeroTitle": "{{title}} list",
     "listHeroText": "Manage {{count}} records with search, advanced filters, and infinite scroll.",
     "listEmptyTitle": "No {{title}} records found",
@@ -959,6 +961,8 @@
       "transferDate": "Transfer date is required.",
       "documentNo": "Document number is required."
     },
+    "permissionDeniedTitle": "Permission required",
+    "permissionDeniedDescription": "You do not have permission to create {{title}}.",
     "errors": {
       "customerLoad": "Customer list could not be loaded.",
       "projectLoad": "Project list could not be loaded.",

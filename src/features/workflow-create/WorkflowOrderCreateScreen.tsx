@@ -12,9 +12,11 @@ import { AppDialog } from '@/components/ui/AppDialog';
 import { ScreenState } from '@/components/ui/ScreenState';
 import { Text } from '@/components/ui/Text';
 import { PagedSelectionSheet } from '@/components/ui/PagedSelectionSheet';
+import { hasPermission } from '@/features/auth/utils/permissions';
 import { normalizeError } from '@/lib/errors';
 import { showError, showWarning } from '@/lib/feedback';
 import { useTheme } from '@/providers/ThemeProvider';
+import { useAuthStore } from '@/store/auth';
 import { SelectionSheet } from '@/features/goods-receipt-create/components/SelectionSheet';
 import type { WorkflowModuleConfig } from '@/features/operations/types/workflow';
 import { WorkflowIcon } from '@/features/operations/screens/WorkflowIcon';
@@ -98,7 +100,9 @@ export function WorkflowOrderCreateScreen({
 }): React.ReactElement {
   const { t } = useTranslation();
   const { theme } = useTheme();
+  const permissions = useAuthStore((state) => state.permissions);
   const meta = useMemo(() => getModuleMeta(module), [module]);
+  const canCreate = hasPermission(permissions, module.createPermissionCode);
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [stockTab, setStockTab] = useState<'stocks' | 'selected'>('stocks');
   const [mode, setMode] = useState<CreateWorkflowMode>(forcedMode ?? (module.key === 'warehouse-outbound' ? 'free' : 'order'));
@@ -371,6 +375,10 @@ export function WorkflowOrderCreateScreen({
   };
 
   const handleSave = () => {
+    if (!canCreate) {
+      showWarning(t('workflowCreate.permissionDeniedDescription', { title: t(titleKey || module.createTitleKey) }));
+      return;
+    }
     if (selectedItems.length === 0) {
       showWarning(t('workflowCreate.validation.selectAtLeastOne'));
       return;
@@ -466,6 +474,16 @@ export function WorkflowOrderCreateScreen({
         </View>
       </LinearGradient>
 
+      {!canCreate ? (
+        <ScreenState
+          tone="error"
+          title={t('workflowCreate.permissionDeniedTitle')}
+          description={t('workflowCreate.permissionDeniedDescription', {
+            title: t(titleKey || module.createTitleKey),
+          })}
+        />
+      ) : null}
+
       {meta.supportsFreeMode && !lockMode ? (
         <View style={grStyles.modeRow}>
           <Pressable
@@ -558,14 +576,15 @@ export function WorkflowOrderCreateScreen({
 
       {currentStep === 1 ? (
         <Pressable
-          onPress={() => {
-            if (validateStepOne()) {
-              setCurrentStep(2);
-            }
-          }}
-          style={({ pressed }) => [{ width: '100%', opacity: pressed ? 0.92 : 1 }]}
-          accessibilityLabel={t('common.continue')}
-        >
+            onPress={() => {
+              if (validateStepOne()) {
+                setCurrentStep(2);
+              }
+            }}
+            disabled={!canCreate}
+            style={({ pressed }) => [{ width: '100%', opacity: pressed ? 0.92 : 1 }]}
+            accessibilityLabel={t('common.continue')}
+          >
           <LinearGradient
             colors={Array.from(theme.gradients.primary) as [string, string, string]}
             start={{ x: 0, y: 0 }}
@@ -596,6 +615,7 @@ export function WorkflowOrderCreateScreen({
             <Button
               title={createMutation.isPending ? t('common.loading') : t('common.save')}
               onPress={handleSave}
+              disabled={!canCreate}
               loading={createMutation.isPending}
             />
           </View>

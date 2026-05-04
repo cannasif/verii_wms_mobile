@@ -84,6 +84,9 @@ export interface WorkflowTerminalLineDetail {
 
 export interface WorkflowModuleConfig {
   key: WorkflowModuleKey;
+  viewPermissionCode: string;
+  createPermissionCode: string;
+  updatePermissionCode: string;
   titleKey: string;
   subtitleKey: string;
   createTitleKey: string;

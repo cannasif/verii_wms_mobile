@@ -461,6 +461,8 @@
     "detailBranchCode": "Şube kodu",
     "detailShow": "Göster",
     "detailHide": "Gizle",
+    "permissionDeniedTitle": "Yetki gerekli",
+    "permissionDeniedDescription": "{{title}} detayını görüntüleme yetkiniz yok.",
     "listHeroTitle": "{{title}} listesi",
     "listHeroText": "{{count}} kaydı arama, filtre ve sonsuz scroll ile yönetin.",
     "listEmptyTitle": "{{title}} kaydı bulunamadı",
@@ -960,6 +962,8 @@
       "transferDate": "Transfer tarihi zorunludur.",
       "documentNo": "Belge no zorunludur."
     },
+    "permissionDeniedTitle": "Yetki gerekli",
+    "permissionDeniedDescription": "{{title}} oluşturma yetkiniz yok.",
     "errors": {
       "customerLoad": "Müşteri listesi alınamadı.",
       "projectLoad": "Proje listesi alınamadı.",

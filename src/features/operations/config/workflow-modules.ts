@@ -20,6 +20,9 @@ const goodsReceiptAssignedFilters = [
 export const WORKFLOW_MODULES: readonly WorkflowModuleConfig[] = [
   {
     key: 'goods-receipt',
+    viewPermissionCode: 'wms.goods-receipt.view',
+    createPermissionCode: 'wms.goods-receipt.create',
+    updatePermissionCode: 'wms.goods-receipt.update',
     titleKey: 'workflow.goodsReceipt.title',
     subtitleKey: 'workflow.goodsReceipt.subtitle',
     createTitleKey: 'workflow.goodsReceipt.createTitle',
@@ -55,6 +58,9 @@ export const WORKFLOW_MODULES: readonly WorkflowModuleConfig[] = [
   },
   {
     key: 'transfer',
+    viewPermissionCode: 'wms.transfer.view',
+    createPermissionCode: 'wms.transfer.create',
+    updatePermissionCode: 'wms.transfer.update',
     titleKey: 'workflow.transfer.title',
     subtitleKey: 'workflow.transfer.subtitle',
     createTitleKey: 'workflow.transfer.createTitle',
@@ -90,6 +96,9 @@ export const WORKFLOW_MODULES: readonly WorkflowModuleConfig[] = [
   },
   {
     key: 'warehouse-inbound',
+    viewPermissionCode: 'wms.warehouse.inbound.view',
+    createPermissionCode: 'wms.warehouse.inbound.create',
+    updatePermissionCode: 'wms.warehouse.inbound.update',
     titleKey: 'workflow.warehouseInbound.title',
     subtitleKey: 'workflow.warehouseInbound.subtitle',
     createTitleKey: 'workflow.warehouseInbound.createTitle',
@@ -125,6 +134,9 @@ export const WORKFLOW_MODULES: readonly WorkflowModuleConfig[] = [
   },
   {
     key: 'warehouse-outbound',
+    viewPermissionCode: 'wms.warehouse.outbound.view',
+    createPermissionCode: 'wms.warehouse.outbound.create',
+    updatePermissionCode: 'wms.warehouse.outbound.update',
     titleKey: 'workflow.warehouseOutbound.title',
     subtitleKey: 'workflow.warehouseOutbound.subtitle',
     createTitleKey: 'workflow.warehouseOutbound.createTitle',
@@ -160,6 +172,9 @@ export const WORKFLOW_MODULES: readonly WorkflowModuleConfig[] = [
   },
   {
     key: 'shipment',
+    viewPermissionCode: 'wms.shipment.view',
+    createPermissionCode: 'wms.shipment.create',
+    updatePermissionCode: 'wms.shipment.update',
     titleKey: 'workflow.shipment.title',
     subtitleKey: 'workflow.shipment.subtitle',
     createTitleKey: 'workflow.shipment.createTitle',
@@ -195,6 +210,9 @@ export const WORKFLOW_MODULES: readonly WorkflowModuleConfig[] = [
   },
   {
     key: 'subcontracting-issue',
+    viewPermissionCode: 'wms.subcontracting.issue.view',
+    createPermissionCode: 'wms.subcontracting.issue.create',
+    updatePermissionCode: 'wms.subcontracting.issue.update',
     titleKey: 'workflow.subcontractingIssue.title',
     subtitleKey: 'workflow.subcontractingIssue.subtitle',
     createTitleKey: 'workflow.subcontractingIssue.createTitle',
@@ -230,6 +248,9 @@ export const WORKFLOW_MODULES: readonly WorkflowModuleConfig[] = [
   },
   {
     key: 'subcontracting-receipt',
+    viewPermissionCode: 'wms.subcontracting.receipt.view',
+    createPermissionCode: 'wms.subcontracting.receipt.create',
+    updatePermissionCode: 'wms.subcontracting.receipt.update',
     titleKey: 'workflow.subcontractingReceipt.title',
     subtitleKey: 'workflow.subcontractingReceipt.subtitle',
     createTitleKey: 'workflow.subcontractingReceipt.createTitle',
