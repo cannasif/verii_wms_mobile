@@ -1,5 +1,6 @@
 export const ACCESS_TOKEN_KEY = 'wms_mobile_access_token';
 export const USER_STORAGE_KEY = 'wms_mobile_user';
+export const PERMISSIONS_STORAGE_KEY = 'wms_mobile_permissions';
 export const BRANCH_STORAGE_KEY = 'wms_mobile_branch';
 export const LANGUAGE_STORAGE_KEY = 'wms_mobile_language';
 export const API_BASE_URL_STORAGE_KEY = 'wms_mobile_api_base_url';

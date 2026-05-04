@@ -2,6 +2,7 @@ import i18next from 'i18next';
 import { apiClient } from '@/lib/axios';
 import type { ApiRequestOptions } from '@/lib/request-utils';
 import type {
+  ApiResponse,
   Branch,
   BranchErp,
   BranchListResponse,
@@ -12,7 +13,8 @@ import type {
   LoginRequest,
   LoginResponse,
   LoginResponseData,
-  LoginResponsePayload
+  LoginResponsePayload,
+  MyPermissionsDto
 } from '../types';
 
 const mapBranch = (branch: BranchErp): Branch => ({
@@ -45,6 +47,15 @@ export const authApi = {
     }
 
     throw new Error(i18next.t('auth.invalidToken'));
+  },
+  async getMyPermissions(): Promise<MyPermissionsDto> {
+    const response = await apiClient.get<ApiResponse<MyPermissionsDto>>('/api/auth/me/permissions', {
+      params: { platform: 'mobile' },
+    });
+    if (!response.data.success) {
+      throw new Error(response.data.message || i18next.t('common.error'));
+    }
+    return response.data.data;
   },
   async requestPasswordReset(payload: ForgotPasswordRequest): Promise<string> {
     const response = await apiClient.post<ForgotPasswordResponse>('/api/auth/request-password-reset', payload);

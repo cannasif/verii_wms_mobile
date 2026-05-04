@@ -10,6 +10,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppDialog } from '@/components/ui/AppDialog';
 import { AppErrorBoundary } from '@/components/system/AppErrorBoundary';
 import { initializeApiBaseUrl } from '@/constants/config';
+import { authApi } from '@/features/auth/api';
 import { showError } from '@/lib/feedback';
 import { realtimeNotifications } from '@/lib/realtime-notifications';
 import i18n from '@/locales';
@@ -43,6 +44,8 @@ function RootLayoutContent(): React.ReactElement {
   const hydrate = useAuthStore((state) => state.hydrate);
   const isHydrated = useAuthStore((state) => state.isHydrated);
   const token = useAuthStore((state) => state.token);
+  const permissions = useAuthStore((state) => state.permissions);
+  const setPermissions = useAuthStore((state) => state.setPermissions);
   const { theme } = useTheme();
   const [versionState, setVersionState] = useState<VersionCheckResult | null>(null);
   const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);
@@ -87,6 +90,25 @@ function RootLayoutContent(): React.ReactElement {
 
     void runVersionCheck(true);
   }, [isHydrated, runVersionCheck]);
+
+  useEffect(() => {
+    if (!isHydrated || !token || permissions) {
+      return;
+    }
+
+    let cancelled = false;
+    void authApi.getMyPermissions()
+      .then(async (nextPermissions) => {
+        if (!cancelled) {
+          await setPermissions(nextPermissions);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isHydrated, permissions, setPermissions, token]);
 
   useEffect(() => {
     if (!isHydrated) {

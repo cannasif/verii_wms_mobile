@@ -59,6 +59,15 @@ export interface User {
   role?: string;
 }
 
+export interface MyPermissionsDto {
+  userId: number;
+  roleTitle: string;
+  isSystemAdmin: boolean;
+  platform?: string | null;
+  permissionGroups: string[];
+  permissionCodes: string[];
+}
+
 export interface JWTPayload {
   "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier": string;
   "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress": string;

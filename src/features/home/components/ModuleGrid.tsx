@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/constants/theme';
 import { useTheme } from '@/providers/ThemeProvider';
+import { useAuthStore } from '@/store/auth';
 import { HOME_MODULES } from '../constants/modules';
 
 // Distinct colored icon background per quick action
@@ -19,6 +20,7 @@ export function ModuleGrid(): React.ReactElement {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const router = useRouter();
+  const permissions = useAuthStore((state) => state.permissions);
   const isDark = theme.mode === 'dark';
 
   const routeMap: Record<(typeof HOME_MODULES)[number]['key'], string> = {
@@ -30,7 +32,7 @@ export function ModuleGrid(): React.ReactElement {
 
   return (
     <View style={styles.row}>
-      {HOME_MODULES.map((item, index) => {
+      {HOME_MODULES.filter((item) => permissions?.isSystemAdmin || permissions?.permissionCodes?.includes(item.permissionCode)).map((item, index) => {
         const Icon = item.icon;
         const p = PALETTES[index % PALETTES.length];
         const tone = isDark ? p.dark : p.light;
