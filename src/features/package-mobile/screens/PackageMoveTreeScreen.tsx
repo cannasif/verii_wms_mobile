@@ -9,9 +9,11 @@ import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { ScreenState } from '@/components/ui/ScreenState';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { Text } from '@/components/ui/Text';
+import { hasPermission } from '@/features/auth/utils/permissions';
 import { RADII, SPACING } from '@/constants/theme';
 import { showError, showSuccess } from '@/lib/feedback';
 import { useTheme } from '@/providers/ThemeProvider';
+import { useAuthStore } from '@/store/auth';
 import { packageMobileApi } from '../api';
 import type { MobilePackageTreeNode } from '../types';
 
@@ -75,8 +77,11 @@ export function PackageMoveTreeScreen({
 }): React.ReactElement {
   const { t } = useTranslation();
   const { theme } = useTheme();
+  const permissions = useAuthStore((state) => state.permissions);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [note, setNote] = useState('');
+  const requiredPermissionCode = moduleKey === 'shipment' ? 'wms.shipment.update' : 'wms.transfer.update';
+  const canUpdate = hasPermission(permissions, requiredPermissionCode);
 
   const headerQuery = useQuery({
     queryKey: ['package-mobile', 'header', sourcePackingHeaderId],
@@ -129,6 +134,19 @@ export function PackageMoveTreeScreen({
 
   const isLoading = headerQuery.isLoading || treeQuery.isLoading;
   const isError = headerQuery.isError || treeQuery.isError;
+
+  if (!canUpdate) {
+    return (
+      <PageShell>
+        <ScreenHeader title={t('packageMoveMobile.treeTitle')} subtitle={t('packageMoveMobile.treeSubtitle', { target: targetLabel })} />
+        <ScreenState
+          tone="error"
+          title={t('workflow.detail.updatePermissionDeniedTitle')}
+          description={t('workflow.detail.updatePermissionDeniedDescription', { title: t('packageMoveMobile.treeTitle') })}
+        />
+      </PageShell>
+    );
+  }
 
   if (isLoading) {
     return (

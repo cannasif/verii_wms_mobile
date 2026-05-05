@@ -18,12 +18,15 @@ import type { Warehouse } from '@/features/goods-receipt-create/types';
 import { PageShell } from '@/components/layout/PageShell';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { Button } from '@/components/ui/Button';
+import { ScreenState } from '@/components/ui/ScreenState';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { Text } from '@/components/ui/Text';
+import { hasPermission } from '@/features/auth/utils/permissions';
 import { LAYOUT, RADII, SPACING, type AppTheme } from '@/constants/theme';
 import { showError, showSuccess } from '@/lib/feedback';
 import { normalizeError } from '@/lib/errors';
 import { useTheme } from '@/providers/ThemeProvider';
+import { useAuthStore } from '@/store/auth';
 import { packageMobileApi } from '../api';
 import type { CreatePHeaderDto, CreatePLineDto, CreatePPackageDto } from '../packaging-types';
 import {
@@ -87,6 +90,8 @@ export function PackageCreateScreen(): React.ReactElement {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const queryClient = useQueryClient();
+  const permissions = useAuthStore((state) => state.permissions);
+  const canCreate = hasPermission(permissions, 'wms.package.create');
   const [flow, setFlow] = useState<'manual' | 'auto'>('manual');
   const [manualStep, setManualStep] = useState<1 | 2 | 3>(1);
 
@@ -123,6 +128,19 @@ export function PackageCreateScreen(): React.ReactElement {
   const [autoReuse, setAutoReuse] = useState(true);
 
   const [warehouseModal, setWarehouseModal] = useState(false);
+
+  if (!canCreate) {
+    return (
+      <PageShell>
+        <ScreenHeader title={t('packageMobile.create.title')} subtitle={t('packageMobile.create.subtitle')} />
+        <ScreenState
+          tone="error"
+          title={t('workflowCreate.permissionDeniedTitle')}
+          description={t('workflowCreate.permissionDeniedDescription', { title: t('packageMobile.create.title') })}
+        />
+      </PageShell>
+    );
+  }
 
   const warehousesQuery = useQuery({
     queryKey: ['package-create', 'warehouses'],

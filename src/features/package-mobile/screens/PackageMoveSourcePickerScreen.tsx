@@ -8,12 +8,15 @@ import { FlashPagedList } from '@/components/paged/FlashPagedList';
 import { PagedFilterModal } from '@/components/paged/PagedFilterModal';
 import { PagedListToolbar } from '@/components/paged/PagedListToolbar';
 import { PageShell } from '@/components/layout/PageShell';
+import { ScreenState } from '@/components/ui/ScreenState';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { Text } from '@/components/ui/Text';
+import { hasPermission } from '@/features/auth/utils/permissions';
 import { RADII, SPACING } from '@/constants/theme';
 import { formatLocalizedDate, formatLocalizedNumber } from '@/lib/formatters';
 import { useTheme } from '@/providers/ThemeProvider';
 import { usePagedFlatList } from '@/hooks/usePagedFlatList';
+import { useAuthStore } from '@/store/auth';
 import { packageMobileApi } from '../api';
 import { packageHeaderFilters, type MobilePackageHeaderItem } from '../types';
 
@@ -30,7 +33,10 @@ export function PackageMoveSourcePickerScreen({
 }): React.ReactElement {
   const { t } = useTranslation();
   const { theme } = useTheme();
+  const permissions = useAuthStore((state) => state.permissions);
   const [filterVisible, setFilterVisible] = useState(false);
+  const requiredPermissionCode = moduleKey === 'shipment' ? 'wms.shipment.update' : 'wms.transfer.update';
+  const canUpdate = hasPermission(permissions, requiredPermissionCode);
 
   const paged = usePagedFlatList<MobilePackageHeaderItem>({
     queryKey: ['package-mobile', 'move-source', targetSourceType, targetSourceHeaderId],
@@ -49,6 +55,19 @@ export function PackageMoveSourcePickerScreen({
       };
     },
   });
+
+  if (!canUpdate) {
+    return (
+      <PageShell>
+        <ScreenHeader title={t('packageMoveMobile.title')} subtitle={t('packageMoveMobile.subtitle', { target: targetLabel })} />
+        <ScreenState
+          tone="error"
+          title={t('workflow.detail.updatePermissionDeniedTitle')}
+          description={t('workflow.detail.updatePermissionDeniedDescription', { title: t('packageMoveMobile.title') })}
+        />
+      </PageShell>
+    );
+  }
 
   const header = useMemo(
     () => (

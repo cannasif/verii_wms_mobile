@@ -8,10 +8,12 @@ import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { ScreenState } from '@/components/ui/ScreenState';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { Text } from '@/components/ui/Text';
+import { hasPermission } from '@/features/auth/utils/permissions';
 import { RADII, SPACING } from '@/constants/theme';
 import { formatLocalizedDate, formatLocalizedNumber } from '@/lib/formatters';
 import { normalizeError } from '@/lib/errors';
 import { useTheme } from '@/providers/ThemeProvider';
+import { useAuthStore } from '@/store/auth';
 import { packageMobileApi } from '../api';
 import type { MobilePackageTreeNode } from '../types';
 
@@ -83,6 +85,21 @@ function PackageTreeNodeCard({ node, depth = 0 }: { node: MobilePackageTreeNode;
 export function PackageHeaderDetailScreen({ headerId }: { headerId: number }): React.ReactElement {
   const { t } = useTranslation();
   const { theme } = useTheme();
+  const permissions = useAuthStore((state) => state.permissions);
+  const canView = hasPermission(permissions, 'wms.package.view');
+
+  if (!canView) {
+    return (
+      <PageShell>
+        <ScreenHeader title={t('packageMobile.detail.title')} subtitle={t('packageMobile.detail.subtitle')} />
+        <ScreenState
+          tone="error"
+          title={t('workflow.detail.permissionDeniedTitle')}
+          description={t('workflow.detail.permissionDeniedDescription', { title: t('packageMobile.detail.title') })}
+        />
+      </PageShell>
+    );
+  }
 
   const headerQuery = useQuery({
     queryKey: ['package-mobile', 'header', headerId],

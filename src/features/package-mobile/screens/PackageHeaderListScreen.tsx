@@ -13,11 +13,14 @@ import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { FlashPagedList } from '@/components/paged/FlashPagedList';
 import { PagedFilterModal } from '@/components/paged/PagedFilterModal';
 import { PagedListToolbar } from '@/components/paged/PagedListToolbar';
+import { ScreenState } from '@/components/ui/ScreenState';
 import { Text } from '@/components/ui/Text';
+import { hasPermission } from '@/features/auth/utils/permissions';
 import { LAYOUT, RADII, SPACING } from '@/constants/theme';
 import { formatLocalizedDate, formatLocalizedNumber } from '@/lib/formatters';
 import { useTheme } from '@/providers/ThemeProvider';
 import { usePagedFlatList } from '@/hooks/usePagedFlatList';
+import { useAuthStore } from '@/store/auth';
 import { packageMobileApi } from '../api';
 import { packageHeaderFilters, type MobilePackageHeaderItem } from '../types';
 
@@ -53,8 +56,11 @@ export function PackageHeaderListScreen(): React.ReactElement {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const isDark = theme.mode === 'dark';
+  const permissions = useAuthStore((state) => state.permissions);
   const [filterVisible, setFilterVisible] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const canView = hasPermission(permissions, 'wms.package.view');
+  const canCreate = hasPermission(permissions, 'wms.package.create');
 
   const paged = usePagedFlatList<MobilePackageHeaderItem>({
     queryKey: ['package-mobile', 'headers'],
@@ -65,6 +71,19 @@ export function PackageHeaderListScreen(): React.ReactElement {
     columns: packageHeaderFilters,
     fetchPage: (params, options) => packageMobileApi.getHeaders(params, options),
   });
+
+  if (!canView) {
+    return (
+      <View style={{ flex: 1 }}>
+        <ScreenHeader title={t('packageMobile.list.title')} subtitle={t('packageMobile.list.subtitle')} />
+        <ScreenState
+          tone="error"
+          title={t('workflow.detail.permissionDeniedTitle')}
+          description={t('workflow.detail.permissionDeniedDescription', { title: t('packageMobile.list.title') })}
+        />
+      </View>
+    );
+  }
 
   /* ── status palette ── */
   const statusMap = useMemo(() => ({
@@ -236,7 +255,10 @@ export function PackageHeaderListScreen(): React.ReactElement {
         </View>
         {/* create button */}
         <Pressable
-          onPress={() => router.push('/(tabs)/inventory/packages/create' as never)}
+          onPress={() => {
+            if (!canCreate) return;
+            router.push('/(tabs)/inventory/packages/create' as never);
+          }}
           style={({ pressed }) => [
             styles.createBtn,
             {
@@ -244,6 +266,7 @@ export function PackageHeaderListScreen(): React.ReactElement {
               backgroundColor: pressed
                 ? isDark ? 'rgba(212,165,116,0.20)' : 'rgba(196,149,106,0.18)'
                 : isDark ? 'rgba(212,165,116,0.12)' : 'rgba(196,149,106,0.10)',
+              opacity: canCreate ? 1 : 0.45,
             },
           ]}
           hitSlop={8}
